@@ -26,6 +26,21 @@
  */
 
 // If uninstall not called from WordPress, then exit.
-if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+if (! defined('WP_UNINSTALL_PLUGIN')) {
 	exit;
 }
+
+global $wpdb;
+$resources_table = $wpdb->prefix . 'rb_resources';
+$bookings_table = $wpdb->prefix . 'rb_bookings';
+
+/** 
+ * Delete plugin database tables. 
+ */
+$wpdb->query("DROP TABLE IF EXISTS {$bookings_table}");
+$wpdb->query("DROP TABLE IF EXISTS {$resources_table}");
+
+/** 
+ * Delete plugin settings. 
+ */ 
+delete_option('resource_booking_settings');
