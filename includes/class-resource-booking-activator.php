@@ -30,6 +30,10 @@ class Resource_Booking_Activator {
 	 * @since    1.0.0
 	 */
 	public static function activate() {
+		
+		require_once plugin_dir_path( __FILE__ ) . 'class-resource-booking-database.php';
+
+		Resource_Booking_Database::create_tables();
 
 	}
 
