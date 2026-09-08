@@ -92,15 +92,49 @@ class Resource_Booking_Admin
 	
 	public function resource_booking_page()
 	{
+		if ( isset( $_GET['action'] ) && 'add' === $_GET['action'] ) {
+			$this->add_resource_page();
+			return;
+		}
 		echo '<div class="wrap">';
 		echo '<h1>Resource Management</h1>';
 
 		echo '<p>Manage your bookable resources here.</p>';
 
-		echo '<a href="#" class="page-title-action">Add New Resource</a>';
+		echo '<a href="' . admin_url( 'admin.php?page=resource-booking&action=add' ) . '" class="page-title-action">Add New Resource</a>';
 
-		echo '</div>';	
-		}
+		echo '</div>';
+	}
+
+	public function add_resource_page()
+	{
+		echo '<div class="wrap">';
+		echo '<h1>Add New Resource</h1>';
+		echo '<form method="post">';
+
+		wp_nonce_field( 'resource_booking_add_resource', 'resource_booking_nonce' );
+
+		echo '<table class="form-table">';
+		echo '<tr>';
+		echo '<th><label for="resource_name">Resource Name</label></th>';
+		echo '<td><input type="text" name="resource_name" id="resource_name" class="regular-text"></td>';
+		echo '</tr>';
+		echo '<tr>';
+		echo '<th><label for="resource_description">Description</label></th>';
+		echo '<td><textarea name="resource_description" id="resource_description" rows="5" class="large-text"></textarea></td>';
+		echo '</tr>';
+		echo '<tr>';
+		echo '<th><label for="resource_capacity">Capacity / Quantity</label></th>';
+		echo '<td><input type="number" name="resource_capacity" id="resource_capacity" min="1" value="1" class="small-text"></td>';
+		echo '</tr>';
+		echo '</table>';
+		echo '<p class="submit">';
+		echo '<input type="submit" name="resource_booking_save" class="button button-primary" value="Save Resource">';
+		echo '</p>';
+		echo '</form>';
+		echo '</div>';
+	}
+	
 
 
 
