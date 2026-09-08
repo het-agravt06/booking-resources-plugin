@@ -20,7 +20,8 @@
  * @subpackage Resource_Booking/admin
  * @author     Het Agravat <agravathet51@gmail.com>
  */
-class Resource_Booking_Admin {
+class Resource_Booking_Admin
+{
 
 	/**
 	 * The ID of this plugin.
@@ -47,19 +48,69 @@ class Resource_Booking_Admin {
 	 * @param      string    $plugin_name       The name of this plugin.
 	 * @param      string    $version    The version of this plugin.
 	 */
-	public function __construct( $plugin_name, $version ) {
+	public function __construct($plugin_name, $version)
+	{
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-
 	}
+
+
+	/** 
+	 * Register the Resource Booking admin menu. 
+	 * 
+	 *  @since 1.0.0 
+	 */ 
+	
+	public function add_admin_menu()
+	{
+		add_menu_page(
+			'Resource Booking', 
+			'Resource Booking', 
+			'manage_options', 
+			'resource-booking', 
+			array(
+				$this, 'resource_booking_page'
+			), 
+			'dashicons-calendar-alt', 
+			25
+		);
+		add_submenu_page(
+			'resource-booking', 
+			'Resources', 
+			'Resources', 
+			'manage_options', 
+			'resource-booking', 
+			array($this, 'resource_booking_page')
+		);
+	}
+	/**
+	 * Display the Resource Booking page. 
+	 * 
+	 * @since 1.0.0 
+	 */ 
+	
+	public function resource_booking_page()
+	{
+		echo '<div class="wrap">';
+		echo '<h1>Resource Management</h1>';
+
+		echo '<p>Manage your bookable resources here.</p>';
+
+		echo '<a href="#" class="page-title-action">Add New Resource</a>';
+
+		echo '</div>';	
+		}
+
+
 
 	/**
 	 * Register the stylesheets for the admin area.
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_styles() {
+	public function enqueue_styles()
+	{
 
 		/**
 		 * This function is provided for demonstration purposes only.
@@ -73,8 +124,7 @@ class Resource_Booking_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/resource-booking-admin.css', array(), $this->version, 'all' );
-
+		wp_enqueue_style($this->plugin_name, plugin_dir_url(__FILE__) . 'css/resource-booking-admin.css', array(), $this->version, 'all');
 	}
 
 	/**
@@ -82,7 +132,8 @@ class Resource_Booking_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_scripts() {
+	public function enqueue_scripts()
+	{
 
 		/**
 		 * This function is provided for demonstration purposes only.
@@ -96,8 +147,6 @@ class Resource_Booking_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/resource-booking-admin.js', array( 'jquery' ), $this->version, false );
-
+		wp_enqueue_script($this->plugin_name, plugin_dir_url(__FILE__) . 'js/resource-booking-admin.js', array('jquery'), $this->version, false);
 	}
-
 }
