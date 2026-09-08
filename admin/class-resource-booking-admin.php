@@ -22,7 +22,6 @@
  */
 class Resource_Booking_Admin
 {
-
 	/**
 	 * The ID of this plugin.
 	 *
@@ -108,10 +107,67 @@ class Resource_Booking_Admin
 
 	public function add_resource_page()
 	{
+		if ( isset( $_POST['resource_booking_save'] ) ) {
+
+			check_admin_referer(
+				'resource_booking_add_resource',
+				'resource_booking_nonce'
+			);
+
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( 'You do not have permission to manage resources.' );
+			}
+
+			//capability check
+			$resource_name        = isset( $_POST['resource_name'] ) ? sanitize_text_field( wp_unslash( $_POST['resource_name'] ) ) : '';  //"10" → 10
+			$resource_description = isset( $_POST['resource_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['resource_description'] ) ) : '';  //"5abc" → 5
+			$resource_capacity    = isset( $_POST['resource_capacity'] ) ? absint( $_POST['resource_capacity'] ) : 0;   // e.g. "-3" → 0
+			
+			//validate value
+			if ( empty( $resource_name ) ) {
+				wp_die( 'Resource name is required.' );
+			}
+
+			if ( $resource_capacity < 1 ) {
+				wp_die( 'Resource capacity must be at least 1.' );
+			}
+
+			//get wpdb object
+			global $wpdb;
+
+			$resources_table = $wpdb->prefix . 'rb_resources';
+
+			$result = $wpdb->insert(
+				$resources_table,
+				array(
+					'name'        => $resource_name,
+					'description' => $resource_description,
+					'capacity'    => $resource_capacity,
+					'created_at'  => current_time( 'mysql' ),
+					'updated_at'  => current_time( 'mysql' ),
+				),
+				array(
+					'%s',
+					'%s',
+					'%d',
+					'%s',
+					'%s',
+				)
+			);
+			if ( false === $result ) {
+				wp_die( 'Failed to save the resource.' );
+			}
+
+			echo '<div class="notice notice-success is-dismissible">';
+			echo '<p>Resource saved successfully.</p>';
+			echo '</div>';
+		}
+		
 		echo '<div class="wrap">';
 		echo '<h1>Add New Resource</h1>';
 		echo '<form method="post">';
-
+		
+		//nonce added
 		wp_nonce_field( 'resource_booking_add_resource', 'resource_booking_nonce' );
 
 		echo '<table class="form-table">';
@@ -129,6 +185,8 @@ class Resource_Booking_Admin
 		echo '</tr>';
 		echo '</table>';
 		echo '<p class="submit">';
+		
+		//submit identifier
 		echo '<input type="submit" name="resource_booking_save" class="button button-primary" value="Save Resource">';
 		echo '</p>';
 		echo '</form>';
