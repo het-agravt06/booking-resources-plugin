@@ -95,12 +95,70 @@ class Resource_Booking_Admin
 			$this->add_resource_page();
 			return;
 		}
+
+		if ( isset( $_GET['action'] ) && 'edit' === $_GET['action'] ) {
+			$this->edit_resource_page();
+			return;
+		}
+
+		//database retrieval 
+		global $wpdb;
+
+		$resources_table = $wpdb->prefix . 'rb_resources';
+
+		$resources = $wpdb->get_results(
+			"SELECT * FROM {$resources_table} ORDER BY id DESC"
+		);
+
+		
 		echo '<div class="wrap">';
 		echo '<h1>Resource Management</h1>';
 
 		echo '<p>Manage your bookable resources here.</p>';
 
 		echo '<a href="' . admin_url( 'admin.php?page=resource-booking&action=add' ) . '" class="page-title-action">Add New Resource</a>';
+
+		//display resource list
+		echo '<table class="widefat fixed striped">';
+		echo '<thead>';
+		echo '<tr>';
+		echo '<th>Name</th>';
+		echo '<th>Description</th>';
+		echo '<th>Capacity</th>';
+		echo '<th>Created</th>';
+		echo '<th>Actions</th>';
+		echo '</tr>';
+		echo '</thead>';
+
+		echo '<tbody>';
+
+		if ( ! empty( $resources ) ) {
+
+			foreach ( $resources as $resource ) {
+
+				echo '<tr>';
+
+				echo '<td>' . esc_html( $resource->name ) . '</td>';
+				echo '<td>' . esc_html( $resource->description ) . '</td>';
+				echo '<td>' . esc_html( $resource->capacity ) . '</td>';
+				echo '<td>' . esc_html( $resource->created_at ) . '</td>';
+				echo '<td>';
+					echo '<a href="' . admin_url( 'admin.php?page=resource-booking&action=edit&id=' . $resource->id ) . '">Edit</a>';
+					echo ' | ';
+					echo '<a href="' . admin_url( 'admin.php?page=resource-booking&action=delete&id=' . $resource->id ) . '">Delete</a>';
+				echo '</td>';
+				echo '</tr>';
+			}
+
+		} else {
+
+			echo '<tr>';
+			echo '<td colspan="5">No resources found.</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody>';
+		echo '</table>';
 
 		echo '</div>';
 	}
@@ -162,7 +220,7 @@ class Resource_Booking_Admin
 			echo '<p>Resource saved successfully.</p>';
 			echo '</div>';
 		}
-		
+
 		echo '<div class="wrap">';
 		echo '<h1>Add New Resource</h1>';
 		echo '<form method="post">';
@@ -193,8 +251,140 @@ class Resource_Booking_Admin
 		echo '</div>';
 	}
 	
+	public function edit_resource_page()
+{
+	if ( ! isset( $_GET['id'] ) ) {
+		wp_die( 'Resource ID is required.' );
+	}
 
+	$resource_id = absint( $_GET['id'] );
 
+	if ( $resource_id < 1 ) {
+		wp_die( 'Invalid resource ID.' );
+	}
+
+	global $wpdb;
+
+	$resources_table = $wpdb->prefix . 'rb_resources';
+
+	// Get existing resource.
+	$resource = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT * FROM {$resources_table} WHERE id = %d",
+			$resource_id
+		)
+	);
+
+	if ( ! $resource ) {
+		wp_die( 'Resource not found.' );
+	}
+
+	// Handle resource update.
+	if ( isset( $_POST['resource_booking_update'] ) ) {
+
+		check_admin_referer(
+			'resource_booking_edit_resource',
+			'resource_booking_edit_nonce'
+		);
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'You do not have permission to manage resources.' );
+		}
+
+		// Sanitize form values.
+		$resource_name        = isset( $_POST['resource_name'] ) ? sanitize_text_field( wp_unslash( $_POST['resource_name'] ) ) : '';
+		$resource_description = isset( $_POST['resource_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['resource_description'] ) ) : '';
+		$resource_capacity    = isset( $_POST['resource_capacity'] ) ? absint( $_POST['resource_capacity'] ) : 0;
+
+		// Validate form values.
+		if ( empty( $resource_name ) ) {
+			wp_die( 'Resource name is required.' );
+		}
+
+		if ( $resource_capacity < 1 ) {
+			wp_die( 'Resource capacity must be at least 1.' );
+		}
+
+		// Update resource.
+		$result = $wpdb->update(
+			$resources_table,
+			array(
+				'name'        => $resource_name,
+				'description' => $resource_description,
+				'capacity'    => $resource_capacity,
+				'updated_at'  => current_time( 'mysql' ),
+			),
+			array(
+				'id' => $resource_id,
+			),
+			array(
+				'%s',
+				'%s',
+				'%d',
+				'%s',
+			),
+			array(
+				'%d',
+			)
+		);
+
+		if ( false === $result ) {
+			wp_die( 'Failed to update the resource.' );
+		}
+
+		echo '<div class="notice notice-success is-dismissible">';
+		echo '<p>Resource updated successfully.</p>';
+		echo '</div>';
+
+		// Get updated resource.
+		$resource = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$resources_table} WHERE id = %d",
+				$resource_id
+			)
+		);
+	}
+
+	echo '<div class="wrap">';
+
+	echo '<h1>Edit Resource</h1>';
+
+	echo '<form method="post">';
+
+	wp_nonce_field(
+		'resource_booking_edit_resource',
+		'resource_booking_edit_nonce'
+	);
+
+	echo '<table class="form-table">';
+
+	echo '<tr>';
+	echo '<th><label for="resource_name">Resource Name</label></th>';
+	echo '<td><input type="text" name="resource_name" id="resource_name" class="regular-text" value="' . esc_attr( $resource->name ) . '"></td>';
+	echo '</tr>';
+
+	echo '<tr>';
+	echo '<th><label for="resource_description">Description</label></th>';
+	echo '<td><textarea name="resource_description" id="resource_description" rows="5" class="large-text">' . esc_textarea( $resource->description ) . '</textarea></td>';
+	echo '</tr>';
+
+	echo '<tr>';
+	echo '<th><label for="resource_capacity">Capacity / Quantity</label></th>';
+	echo '<td><input type="number" name="resource_capacity" id="resource_capacity" min="1" value="' . esc_attr( $resource->capacity ) . '" class="small-text"></td>';
+	echo '</tr>';
+
+	echo '</table>';
+
+	echo '<p class="submit">';
+
+	echo '<input type="submit" name="resource_booking_update" class="button button-primary" value="Update Resource">';
+
+	echo '</p>';
+
+	echo '</form>';
+
+	echo '</div>';
+}
 
 	/**
 	 * Register the stylesheets for the admin area.
