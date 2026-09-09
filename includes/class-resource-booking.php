@@ -156,6 +156,10 @@ class Resource_Booking {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+		
+		//for the add enqueue media library
+		$this->loader->add_action( 'admin_enqueue_scripts',	$plugin_admin, 'enqueue_media' );
+		
 		$this->loader->add_action( 'admin_menu',$plugin_admin,'add_admin_menu');
 	
 	}
