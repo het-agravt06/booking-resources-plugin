@@ -122,6 +122,11 @@ class Resource_Booking {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-resource-booking-public.php';
 
+		/**
+		 * The class responsible for rest api
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-resource-booking-rest-api.php';
+		
 		$this->loader = new Resource_Booking_Loader();
 
 	}
@@ -174,10 +179,11 @@ class Resource_Booking {
 	private function define_public_hooks() {
 
 		$plugin_public = new Resource_Booking_Public( $this->get_plugin_name(), $this->get_version() );
-
+		$plugin_rest_api = new Resource_Booking_REST_API();
+		
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
-
+		$this->loader->add_action( 'rest_api_init',$plugin_rest_api,'register_routes');
 	}
 
 	/**
