@@ -184,6 +184,9 @@ class Resource_Booking {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 		$this->loader->add_action( 'rest_api_init',$plugin_rest_api,'register_routes');
+		$this->loader->add_filter( 'cron_schedules', $plugin_rest_api, 'add_cron_interval' );
+		$this->loader->add_action( 'init', $plugin_rest_api, 'schedule_expiration' );
+		$this->loader->add_action( 'resource_booking_expire_bookings', $plugin_rest_api, 'expire_pending_bookings' );
 	}
 
 	/**
