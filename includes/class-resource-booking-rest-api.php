@@ -24,6 +24,17 @@ class Resource_Booking_REST_API
                 'permission_callback' => '__return_true',
             )
         );
+
+        //availability api route
+        register_rest_route(
+            'resource-booking/v1',
+            '/availability',
+            array(
+                'methods'             => 'GET',
+                'callback'            => array( $this, 'get_availability' ),
+                'permission_callback' => '__return_true',
+            )
+        );
     }
 
     /**
@@ -323,4 +334,66 @@ class Resource_Booking_REST_API
             );
         }
     }
+
+    //availability api 
+    //if the req. has expire the output will be on;y success although output success with booking
+    public function get_availability( $request ) {
+
+        $resource_id = absint( $request->get_param( 'resource_id' ) );
+        $date        = sanitize_text_field( $request->get_param( 'date' ) );
+
+        if ( ! $resource_id || ! $date ) {
+            return new WP_Error(
+                'missing_parameters',
+                'Resource ID and date are required.',
+                array( 'status' => 400 )
+            );
+        }
+
+        $date_object = DateTime::createFromFormat( 'Y-m-d', $date );
+
+        if ( ! $date_object || $date_object->format( 'Y-m-d' ) !== $date ) {
+            return new WP_Error(
+                'invalid_date',
+                'Please provide a valid date format: Y-m-d.',
+                array( 'status' => 400 )
+            );
+        }
+
+        global $wpdb;
+
+        $bookings_table = $wpdb->prefix . 'rb_bookings';
+
+        $bookings = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, start_datetime, end_datetime, status
+                FROM {$bookings_table}
+                WHERE resource_id = %d
+                AND status IN ('pending', 'confirmed')
+                AND DATE(start_datetime) = %s
+                ORDER BY start_datetime ASC",
+                $resource_id,
+                $date
+            )
+        );
+
+        return array(
+            'success'     => true,
+            'resource_id' => $resource_id,
+            'date'        => $date,
+            'bookings'    => $bookings,
+        );
+    }
 }
+
+
+
+//http://localhost:10010/wp-json/resource-booking/v1/availability?resource_id=7&date=2026-09-10
+
+/*{
+    "resource_id": 7,
+    "customer_name": "abcd",
+    "customer_email": "abcd@example.com",
+    "start_datetime": "2026-09-21 10:00:00",
+    "end_datetime": "2026-09-21 12:00:00"
+}*/
