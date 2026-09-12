@@ -159,24 +159,20 @@ class Resource_Booking_REST_API
         }
 
         //Blackout Dates
-        $blackout_dates = array(
-            '2026-09-21',
-            '2026-09-22'
-        );
-            
-        // Blackout Dates Validation.
+        $blackout_dates = isset( $settings['blackout_dates'] )
+            ? $settings['blackout_dates']
+            : array();
+
         $booking_date = $start_time->format( 'Y-m-d' );
-        
-        
-        if ( in_array( $booking_date, $blackout_dates, true ) ) 
-            {
+
+        if ( in_array( $booking_date, $blackout_dates, true ) ) {
             return new WP_Error(
                 'blackout_date',
                 'Bookings are not available on this date.',
                 array( 'status' => 400 )
             );
         }
-        error_log( print_r( $settings['blackout_dates'], true ) );
+
 
         // Resource existence check.
         $resources_table = $wpdb->prefix . 'rb_resources';
@@ -377,12 +373,49 @@ class Resource_Booking_REST_API
             )
         );
 
+
+        //add bussiness hour to availabolity api
+        $settings = get_option( 'resource_booking_settings' );
+
+        $day_name = strtolower( $date_object->format( 'l' ) );
+
+        $business_hours = isset( $settings['business_hours'][ $day_name ] )
+            ? $settings['business_hours'][ $day_name ]
+            : null;
+
+
+        // Check blackout date.
+        $blackout_dates = isset( $settings['blackout_dates'] )
+            ? $settings['blackout_dates']
+            : array();
+
+        $is_blackout = in_array( $date, $blackout_dates, true );
+        error_log( 'Availability blackout dates: ' . print_r( $blackout_dates, true ) );
+        error_log( 'Availability date: ' . $date );
+        
+        if ( empty( $business_hours ) ) {
+            return array(
+                'success'        => true,
+                'resource_id'    => $resource_id,
+                'date'           => $date,
+                'business_hours' => null,
+                'blackout_date'  => $is_blackout,
+                'bookings'       => $bookings,
+            );
+        }
+
         return array(
-            'success'     => true,
-            'resource_id' => $resource_id,
-            'date'        => $date,
-            'bookings'    => $bookings,
+            'success'        => true,
+            'resource_id'    => $resource_id,
+            'date'           => $date,
+            'business_hours' => array(
+                'start' => $business_hours[0],
+                'end'   => $business_hours[1],
+            ),
+            'blackout_date' => $is_blackout,
+            'bookings'       => $bookings,
         );
+
     }
 }
 

@@ -46,9 +46,12 @@ class Resource_Booking_Activator
 				'saturday' => array('09:00', '18:00'), 
 				'sunday' => null,
 			), 
-			'blackout_dates' => array(), 
+			'blackout_dates' => array(
+				'2026-09-21',
+				'2026-09-22',
+			),
 			'hold_duration' => 30,
 		);
-		add_option('resource_booking_settings', $default_settings);
+		update_option( 'resource_booking_settings', $default_settings );  
 	}
 }
