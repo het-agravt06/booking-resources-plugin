@@ -283,12 +283,6 @@ class Resource_Booking_REST_API
             'We will notify you once your booking request is reviewed.' . "\n\n" .
             'Thank you.'
         );
-        
-        if ( ! $mail_sent ) {
-            error_log( 'Booking email failed to send to: ' . $customer_email );
-        } else {
-            error_log( 'Booking email sent successfully to: ' . $customer_email );
-        }
 
         //2. admin receive mail when new booking are coming
         $admin_email = get_option( 'admin_email' );
@@ -429,8 +423,6 @@ class Resource_Booking_REST_API
             : array();
 
         $is_blackout = in_array( $date, $blackout_dates, true );
-        error_log( 'Availability blackout dates: ' . print_r( $blackout_dates, true ) );
-        error_log( 'Availability date: ' . $date );
         
         if ( empty( $business_hours ) ) {
             return array(

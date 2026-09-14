@@ -415,7 +415,7 @@ class Resource_Booking_Admin
 			return;
 		}
 
-		// 5. Booking Updated → Customer
+		// . Booking Updated → Customer
 		$resources_table = $wpdb->prefix . 'rb_resources';
 
 		$resource_name = $wpdb->get_var(
@@ -563,14 +563,35 @@ class Resource_Booking_Admin
 			$where_sql = 'WHERE ' . implode( ' AND ', $where );
 		}
 
+		//pagination
+		$per_page = 3;
+
+		$current_page = isset( $_GET['paged'] )
+			? max( 1, absint( $_GET['paged'] ) )
+			: 1;
+
+		$offset = ( $current_page - 1 ) * $per_page;
+
+		$total_bookings = $wpdb->get_var(
+			"SELECT COUNT(*)
+			FROM {$bookings_table} AS bookings
+			{$where_sql}"
+		);
+
+		$total_pages = ceil( $total_bookings / $per_page );
 
 		$bookings = $wpdb->get_results(
-			"SELECT bookings.*, resources.name AS resource_name
-			FROM {$bookings_table} AS bookings
-			LEFT JOIN {$resources_table} AS resources
-				ON bookings.resource_id = resources.id
-			{$where_sql}
-			ORDER BY bookings.start_datetime DESC"
+			$wpdb->prepare(
+				"SELECT bookings.*, resources.name AS resource_name
+				FROM {$bookings_table} AS bookings
+				LEFT JOIN {$resources_table} AS resources
+					ON bookings.resource_id = resources.id
+				{$where_sql}
+				ORDER BY bookings.id DESC
+				LIMIT %d OFFSET %d",
+				$per_page,
+				$offset
+			)
 		);
 
 		echo '<div class="wrap">';
@@ -673,6 +694,36 @@ class Resource_Booking_Admin
 
 		echo '</tbody>';
 		echo '</table>';
+
+		if ( $total_pages > 1 ) {
+
+			echo '<div class="tablenav" style="margin-top:20px;">';
+			echo '<div class="tablenav-pages" style="float:none; text-align:center;">';
+
+			echo paginate_links(
+				array(
+					'base'      => add_query_arg( 'paged', '%#%' ),
+					'format'    => '',
+					'current'   => $current_page,
+					'total'     => $total_pages,
+					'prev_text' => '&laquo; Previous',
+					'next_text' => 'Next &raquo;',
+					'type'      => 'plain',
+				)
+			);
+
+			echo '</div>';
+			echo '</div>';
+
+			echo '<style>
+				.tablenav-pages a,
+				.tablenav-pages span {
+					font-size: 16px;
+					padding: 5px 10px;
+					margin: 10px 3px;
+				}
+			</style>';
+		}
 	}
 
 	//edit booking 
