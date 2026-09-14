@@ -170,7 +170,7 @@ class Resource_Booking_Admin
 		)
 	);
 
-	if ( 'pending' !== $booking->status ) {
+	if ( ! $booking ) {
 		return;
 	}
 
@@ -226,16 +226,39 @@ class Resource_Booking_Admin
 			? sanitize_text_field( wp_unslash( $_POST['end_datetime'] ) )
 			: '';
 
+		$status = isset( $_POST['status'] )
+			? sanitize_text_field( wp_unslash( $_POST['status'] ) )
+			: '';
+
 		//email validation
 		if (
 			! $resource_id ||
 			empty( $customer_name ) ||
 			empty( $customer_email ) ||
 			empty( $start_datetime ) ||
-			empty( $end_datetime )
+			empty( $end_datetime ) ||
+			empty( $status )
 		) {
 			return;
 		}
+
+		if ( ! in_array( $status, array( 'pending', 'confirmed', 'cancelled', 'expired' ), true ) ) {
+			return;
+		}
+
+		if ( 'confirmed' === $booking->status && 'pending' === $status ) {
+			return;
+		}
+
+		if ( 'cancelled' === $booking->status && 'pending' === $status ) {
+			return;
+		}
+
+		if ( 'expired' === $booking->status && 'pending' === $status ) {
+			return;
+		}
+
+
 
 		if ( ! is_email( $customer_email ) ) {
 			return;
@@ -344,6 +367,7 @@ class Resource_Booking_Admin
 				'customer_email' => $customer_email,
 				'start_datetime' => $start_time->format( 'Y-m-d H:i:s' ),
 				'end_datetime'   => $end_time->format( 'Y-m-d H:i:s' ),
+				'status'         => $status,
 				'updated_at'     => current_time( 'mysql' ),
 			),
 			array(
@@ -351,6 +375,7 @@ class Resource_Booking_Admin
 			),
 			array(
 				'%d',
+				'%s',
 				'%s',
 				'%s',
 				'%s',
@@ -652,23 +677,37 @@ class Resource_Booking_Admin
 			echo '</tr>';
 
 		echo '<tr>';
-		echo '<th><label for="customer_name">Customer Name</label></th>';
-		echo '<td><input type="text" name="customer_name" id="customer_name" value="' . esc_attr( $booking->customer_name ) . '" class="regular-text"></td>';
+			echo '<th><label for="customer_name">Customer Name</label></th>';
+			echo '<td><input type="text" name="customer_name" id="customer_name" value="' . esc_attr( $booking->customer_name ) . '" class="regular-text"></td>';
 		echo '</tr>';
 
 		echo '<tr>';
-		echo '<th><label for="customer_email">Customer Email</label></th>';
-		echo '<td><input type="email" name="customer_email" id="customer_email" value="' . esc_attr( $booking->customer_email ) . '" class="regular-text"></td>';
+			echo '<th><label for="customer_email">Customer Email</label></th>';
+			echo '<td><input type="email" name="customer_email" id="customer_email" value="' . esc_attr( $booking->customer_email ) . '" class="regular-text"></td>';
 		echo '</tr>';
 
 		echo '<tr>';
-		echo '<th><label for="start_datetime">Start Date & Time</label></th>';
-		echo '<td><input type="datetime-local" name="start_datetime" id="start_datetime" value="' . esc_attr( date( 'Y-m-d\TH:i', strtotime( $booking->start_datetime ) ) ) . '"></td>';
+			echo '<th><label for="start_datetime">Start Date & Time</label></th>';
+			echo '<td><input type="datetime-local" name="start_datetime" id="start_datetime" value="' . esc_attr( date( 'Y-m-d\TH:i', strtotime( $booking->start_datetime ) ) ) . '"></td>';
 		echo '</tr>';
 
 		echo '<tr>';
-		echo '<th><label for="end_datetime">End Date & Time</label></th>';
-		echo '<td><input type="datetime-local" name="end_datetime" id="end_datetime" value="' . esc_attr( date( 'Y-m-d\TH:i', strtotime( $booking->end_datetime ) ) ) . '"></td>';
+			echo '<th><label for="end_datetime">End Date & Time</label></th>';
+			echo '<td><input type="datetime-local" name="end_datetime" id="end_datetime" value="' . esc_attr( date( 'Y-m-d\TH:i', strtotime( $booking->end_datetime ) ) ) . '"></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+			echo '<th><label for="status">Booking Status</label></th>';
+			echo '<td>';
+
+				echo '<select name="status" id="status">';
+				echo '<option value="pending"' . selected( $booking->status, 'pending', false ) . '>Pending</option>';
+				echo '<option value="confirmed"' . selected( $booking->status, 'confirmed', false ) . '>Confirmed</option>';
+				echo '<option value="cancelled"' . selected( $booking->status, 'cancelled', false ) . '>Cancelled</option>';
+				echo '<option value="expired"' . selected( $booking->status, 'expired', false ) . '>Expired</option>';
+				echo '</select>';
+
+			echo '</td>';
 		echo '</tr>';
 
 		echo '</table>';
