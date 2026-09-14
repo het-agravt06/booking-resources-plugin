@@ -83,7 +83,255 @@ class Resource_Booking_Admin
 			'resource-booking',
 			array($this, 'resource_booking_page')
 		);
+		add_submenu_page(
+			'resource-booking',
+			'Bookings',
+			'Bookings',
+			'manage_options',
+			'resource-booking-bookings',
+			array( $this, 'display_bookings_page' )
+		);
+		
 	}
+
+	//form action button handling 
+
+	public function handle_booking_actions() {
+		// error_log( 'HANDLE BOOKING ACTIONS CALLED' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['resource_booking_action'] ) ) {
+			return;
+		}
+
+		if ( 'confirm' !== $_POST['resource_booking_action'] ) {
+			return;
+		}
+
+		if (
+			! isset( $_POST['resource_booking_nonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field( wp_unslash( $_POST['resource_booking_nonce'] ) ),
+				'resource_booking_confirm'
+			)
+		) {
+			return;
+	}
+
+	$booking_id = isset( $_POST['booking_id'] )
+		? absint( $_POST['booking_id'] )
+		: 0;
+
+	if ( ! $booking_id ) {
+		return;
+	}
+
+	global $wpdb;
+
+	$bookings_table = $wpdb->prefix . 'rb_bookings';
+
+	$booking = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT *
+			FROM {$bookings_table}
+			WHERE id = %d",
+			$booking_id
+		)
+	);
+
+	if ( 'pending' !== $booking->status ) {
+		return;
+	}
+
+	$overlapping_booking = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT id
+			FROM {$bookings_table}
+			WHERE resource_id = %d
+			AND id != %d
+			AND status IN ('pending', 'confirmed')
+			AND start_datetime < %s
+			AND end_datetime > %s
+			LIMIT 1",
+			$booking->resource_id,
+			$booking_id,
+			$booking->end_datetime,
+			$booking->start_datetime
+		)
+	);
+
+	if ( $overlapping_booking ) {
+		return;
+	}
+
+
+	$updated = $wpdb->update(
+		$bookings_table,
+		array(
+			'status'     => 'confirmed',
+			'updated_at' => current_time( 'mysql' ),
+		),
+		array(
+			'id' => $booking_id,
+		),
+		array(
+			'%s',
+			'%s',
+		),
+		array(
+			'%d',
+		)
+	);
+
+	if ( false === $updated ) {
+		return;
+	}
+	// We will add the database update here next.
+}
+	public function display_bookings_page() {
+
+		global $wpdb;
+
+		$status = isset( $_GET['status'] )
+			? sanitize_text_field( wp_unslash( $_GET['status'] ) )
+			: '';
+
+		$resource_id = isset( $_GET['resource_id'] )
+			? absint( $_GET['resource_id'] )
+			: 0;
+
+		$bookings_table  = $wpdb->prefix . 'rb_bookings';
+		$resources_table = $wpdb->prefix . 'rb_resources';
+
+		$resources = $wpdb->get_results(
+			"SELECT id, name
+			FROM {$resources_table}
+			ORDER BY name ASC"
+		);
+
+		$where = array();
+
+		if ( ! empty( $status ) ) {
+			$where[] = $wpdb->prepare(
+				'bookings.status = %s',
+				$status
+			);
+		}
+
+		if ( ! empty( $resource_id ) ) {
+			$where[] = $wpdb->prepare(
+				'bookings.resource_id = %d',
+				$resource_id
+			);
+		}
+
+		$where_sql = '';
+
+		if ( ! empty( $where ) ) {
+			$where_sql = 'WHERE ' . implode( ' AND ', $where );
+		}
+
+
+		$bookings = $wpdb->get_results(
+			"SELECT bookings.*, resources.name AS resource_name
+			FROM {$bookings_table} AS bookings
+			LEFT JOIN {$resources_table} AS resources
+				ON bookings.resource_id = resources.id
+			{$where_sql}
+			ORDER BY bookings.start_datetime DESC"
+		);
+
+		echo '<div class="wrap">';
+		echo '<h1>Bookings</h1>';
+
+
+		echo '<form method="get">';
+
+		echo '<input type="hidden" name="page" value="resource-booking-bookings">';
+
+		//Add Status dropdown
+		echo '<select name="status">';
+
+		echo '<option value="">All Statuses</option>';
+		echo '<option value="pending"' . selected( $status, 'pending', false ) . '>Pending</option>';
+		echo '<option value="confirmed"' . selected( $status, 'confirmed', false ) . '>Confirmed</option>';
+		echo '<option value="cancelled"' . selected( $status, 'cancelled', false ) . '>Cancelled</option>';
+		echo '<option value="expired"' . selected( $status, 'expired', false ) . '>Expired</option>';
+
+		echo '</select>';
+
+		// 	Add Resource dropdown
+		echo '<select name="resource_id">';
+
+		echo '<option value="0">All Resources</option>';
+			foreach ( $resources as $resource ) {
+				echo '<option value="' . esc_attr( $resource->id ) . '"'
+					. selected( $resource_id, $resource->id, false ) . '>'
+					. esc_html( $resource->name )
+					. '</option>';
+			}
+		echo '</select>';
+
+
+		submit_button( 'Filter', 'secondary', 'filter', false );
+
+		echo '</form>';
+
+		if ( empty( $bookings ) ) {
+			echo '<p>No bookings found.</p>';
+			return;
+		}
+
+		echo '<table class="widefat fixed striped">';
+		echo '<thead>';
+		echo '<tr>';
+		echo '<th>ID</th>';
+		echo '<th>Resource</th>';
+		echo '<th>Customer Name</th>';
+		echo '<th>Email</th>';
+		echo '<th>Start</th>';
+		echo '<th>End</th>';
+		echo '<th>Status</th>';
+		echo '<th>Actions</th>';
+		echo '</tr>';
+		echo '</thead>';
+
+		echo '<tbody>';
+
+		foreach ( $bookings as $booking ) {
+
+			echo '<tr>';
+
+			echo '<td>' . esc_html( $booking->id ) . '</td>';
+			echo '<td>' . esc_html( $booking->resource_name ) . '</td>';
+			echo '<td>' . esc_html( $booking->customer_name ) . '</td>';
+			echo '<td>' . esc_html( $booking->customer_email ) . '</td>';
+			echo '<td>' . esc_html( $booking->start_datetime ) . '</td>';
+			echo '<td>' . esc_html( $booking->end_datetime ) . '</td>';
+			echo '<td>' . esc_html( ucfirst( $booking->status ) ) . '</td>';
+			echo '<td>';
+
+				if ( 'pending' === $booking->status ) {
+					echo '<form method="post" style="display:inline;">';
+					wp_nonce_field( 'resource_booking_confirm', 'resource_booking_nonce' );
+					echo '<input type="hidden" name="booking_id" value="' . esc_attr( $booking->id ) . '">';
+					echo '<input type="hidden" name="resource_booking_action" value="confirm">';
+					echo '<button type="submit" class="button button-primary">Confirm</button>';
+					echo '</form>';
+				}
+
+			echo '</td>';
+			
+
+			echo '</tr>';
+		}
+
+		echo '</tbody>';
+		echo '</table>';
+	}
+
 	/**
 	 * Display the Resource Booking page. 
 	 * 
