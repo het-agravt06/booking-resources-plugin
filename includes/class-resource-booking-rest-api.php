@@ -268,6 +268,45 @@ class Resource_Booking_REST_API
             );
         }
 
+        //for sending  an email
+
+        //1. user receive mail
+        $mail_sent = wp_mail(
+            $customer_email,
+            'Booking Request Received',
+            'Hello ' . $customer_name . ",\n\n" .
+            'Your booking request has been submitted successfully.' . "\n\n" .
+            'Resource: ' . $resource->name . "\n" .
+            'Start: ' . $start_datetime . "\n" .
+            'End: ' . $end_datetime . "\n" .
+            'Status: Pending' . "\n\n" .
+            'We will notify you once your booking request is reviewed.' . "\n\n" .
+            'Thank you.'
+        );
+        
+        if ( ! $mail_sent ) {
+            error_log( 'Booking email failed to send to: ' . $customer_email );
+        } else {
+            error_log( 'Booking email sent successfully to: ' . $customer_email );
+        }
+
+        //2. admin receive mail when new booking are coming
+        $admin_email = get_option( 'admin_email' );
+        wp_mail(
+            $admin_email,
+            'New Booking Request',
+            'Hello Admin,' . "\n\n" .
+            'A new booking request has been submitted.' . "\n\n" .
+            'Customer Name: ' . $customer_name . "\n" .
+            'Customer Email: ' . $customer_email . "\n" .
+            'Resource: ' . $resource->name . "\n" .
+            'Start: ' . $start_datetime . "\n" .
+            'End: ' . $end_datetime . "\n" .
+            'Status: Pending' . "\n\n" .
+            'Please review the booking request from the WordPress dashboard.'
+        );
+
+        
         return array(
             'success'    => true,
             'message'    => 'Booking request submitted successfully.',

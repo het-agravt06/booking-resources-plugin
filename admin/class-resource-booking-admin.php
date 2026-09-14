@@ -149,13 +149,13 @@ class Resource_Booking_Admin
 			return;
 		}
 
-	$booking_id = isset( $_POST['booking_id'] )
-		? absint( $_POST['booking_id'] )
-		: 0;
+		$booking_id = isset( $_POST['booking_id'] )
+			? absint( $_POST['booking_id'] )
+			: 0;
 
-	if ( ! $booking_id ) {
-		return;
-	}
+		if ( ! $booking_id ) {
+			return;
+		}
 
 	global $wpdb;
 
@@ -198,6 +198,30 @@ class Resource_Booking_Admin
 			return;
 		}
 
+		// sending an email
+		// 4. Booking Cancelled → Customer
+		$resources_table = $wpdb->prefix . 'rb_resources';
+
+		$resource_name = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT name
+				FROM {$resources_table}
+				WHERE id = %d",
+				$booking->resource_id
+			)
+		);
+
+		wp_mail(
+			$booking->customer_email,
+			'Booking Cancelled',
+			'Hello ' . $booking->customer_name . ",\n\n" .
+			'Your booking request has been cancelled.' . "\n\n" .
+			'Resource: ' . $resource_name . "\n" .
+			'Start: ' . $booking->start_datetime . "\n" .
+			'End: ' . $booking->end_datetime . "\n" .
+			'Status: Cancelled' . "\n\n" .
+			'Thank you.'
+		);
 		wp_safe_redirect(
 			admin_url( 'admin.php?page=resource-booking-bookings&rejected=1' )
 		);
@@ -391,6 +415,30 @@ class Resource_Booking_Admin
 			return;
 		}
 
+		// 5. Booking Updated → Customer
+		$resources_table = $wpdb->prefix . 'rb_resources';
+
+		$resource_name = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT name
+				FROM {$resources_table}
+				WHERE id = %d",
+				$resource_id
+			)
+		);
+
+		wp_mail(
+			$customer_email,
+			'Booking Updated',
+			'Hello ' . $customer_name . ",\n\n" .
+			'Your booking has been updated successfully.' . "\n\n" .
+			'Resource: ' . $resource_name . "\n" .
+			'Start: ' . $start_time->format( 'Y-m-d H:i:s' ) . "\n" .
+			'End: ' . $end_time->format( 'Y-m-d H:i:s' ) . "\n" .
+			'Status: ' . ucfirst( $status ) . "\n\n" .
+			'Thank you.'
+		);
+
 		wp_safe_redirect(
 			admin_url( 'admin.php?page=resource-booking-bookings&updated=1' )
 		);
@@ -441,7 +489,31 @@ class Resource_Booking_Admin
 	if ( false === $updated ) {
 		return;
 	}
+	//email sending
+		// 3. Booking Confirmed → Customer
+			$resources_table = $wpdb->prefix . 'rb_resources';
 
+			$resource_name = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT name
+					FROM {$resources_table}
+					WHERE id = %d",
+					$booking->resource_id
+				)
+			);
+
+			wp_mail(
+				$booking->customer_email,
+				'Booking Confirmed',
+				'Hello ' . $booking->customer_name . ",\n\n" .
+				'Your booking has been confirmed successfully.' . "\n\n" .
+				'Resource: ' . $resource_name . "\n" .
+				'Start: ' . $booking->start_datetime . "\n" .
+				'End: ' . $booking->end_datetime . "\n" .
+				'Status: Confirmed' . "\n\n" .
+				'Thank you.'
+			);
+	
 	wp_safe_redirect(
 		admin_url( 'admin.php?page=resource-booking-bookings&confirmed=1' )
 	);
