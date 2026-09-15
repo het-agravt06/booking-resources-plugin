@@ -35,6 +35,17 @@ class Resource_Booking_REST_API
                 'permission_callback' => '__return_true',
             )
         );
+
+        //GET REST API endpoint
+        register_rest_route(
+            'resource-booking/v1',
+            '/resources',
+            array(
+                'methods'             => 'GET',
+                'callback'            => array( $this, 'get_resources' ),
+                'permission_callback' => '__return_true',
+            )
+        );
     }
 
     /**
@@ -447,6 +458,23 @@ class Resource_Booking_REST_API
             'bookings'       => $bookings,
         );
 
+    }
+
+    // for the frontend
+    //get resources
+    public function get_resources() {
+
+        global $wpdb;
+
+        $resources_table = $wpdb->prefix . 'rb_resources';
+
+        $resources = $wpdb->get_results(
+            "SELECT id, name, description, capacity
+            FROM {$resources_table}
+            ORDER BY name ASC"
+        );
+
+        return rest_ensure_response( $resources );
     }
 }
 

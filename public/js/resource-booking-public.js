@@ -29,4 +29,30 @@
 	 * practising this, we should strive to set a better example in our own work.
 	 */
 
+
+	$(function() {
+
+		$.ajax({
+			url: resourceBooking.apiUrl + 'resources',
+			type: 'GET',
+			success: function( resources ) {
+
+				$.each( resources, function( index, resource ) {
+
+					$( '#resource_id' ).append(
+						'<option value="' + resource.id + '">' + resource.name + '</option>'
+					);
+
+				});
+
+			},
+			error: function() {
+
+				console.log( 'Failed to load resources.' );
+
+			}
+		});
+
+	});
+	
 })( jQuery );

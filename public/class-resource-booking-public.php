@@ -20,7 +20,8 @@
  * @subpackage Resource_Booking/public
  * @author     Het Agravat <agravathet51@gmail.com>
  */
-class Resource_Booking_Public {
+class Resource_Booking_Public
+{
 
 	/**
 	 * The ID of this plugin.
@@ -47,11 +48,14 @@ class Resource_Booking_Public {
 	 * @param      string    $plugin_name       The name of the plugin.
 	 * @param      string    $version    The version of this plugin.
 	 */
-	public function __construct( $plugin_name, $version ) {
+	public function __construct($plugin_name, $version)
+	{
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-
+		add_action('init', function () {
+			add_shortcode('test_booking_form', array($this, 'display_booking_form'));
+		});
 	}
 
 	/**
@@ -59,7 +63,8 @@ class Resource_Booking_Public {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_styles() {
+	public function enqueue_styles()
+	{
 
 		/**
 		 * This function is provided for demonstration purposes only.
@@ -73,8 +78,7 @@ class Resource_Booking_Public {
 		 * class.
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/resource-booking-public.css', array(), $this->version, 'all' );
-
+		wp_enqueue_style($this->plugin_name, plugin_dir_url(__FILE__) . 'css/resource-booking-public.css', array(), $this->version, 'all');
 	}
 
 	/**
@@ -82,7 +86,8 @@ class Resource_Booking_Public {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_scripts() {
+	public function enqueue_scripts()
+	{
 
 		/**
 		 * This function is provided for demonstration purposes only.
@@ -96,8 +101,75 @@ class Resource_Booking_Public {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/resource-booking-public.js', array( 'jquery' ), $this->version, false );
-
+		wp_enqueue_script($this->plugin_name, plugin_dir_url(__FILE__) . 'js/resource-booking-public.js', array('jquery'), $this->version, false);
+		wp_localize_script(
+			$this->plugin_name,
+			'resourceBooking',
+			array(
+				'apiUrl' => esc_url_raw(rest_url('resource-booking/v1/')),
+			)
+		);
 	}
 
+
+	/**
+	 * Display the booking form.
+	 *
+	 * @since 1.0.0
+	 */
+	public function display_booking_form()
+	{
+		ob_start();
+		?>
+		<form id="resource-booking-form">
+
+			<p>
+				<label for="resource_id">Resource</label>
+				<select id="resource_id" name="resource_id" required>
+					<option value="">Select Resource</option>
+				</select>
+			</p>
+
+			<p>
+				<label for="customer_name">Name</label>
+				<input type="text" id="customer_name" name="customer_name" required>
+			</p>
+
+			<p>
+				<label for="customer_email">Email</label>
+				<input type="email" id="customer_email" name="customer_email" required>
+			</p>
+
+			<p>
+				<label for="start_datetime">Start</label>
+				<input type="datetime-local" id="start_datetime" name="start_datetime" required>
+			</p>
+
+			<p>
+				<label for="end_datetime">End</label>
+				<input type="datetime-local" id="end_datetime" name="end_datetime" required>
+			</p>
+
+			<button type="submit">Submit Booking</button>
+
+		</form>
+
+		<div id="resource-booking-message"></div>
+
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Register public shortcodes.
+	 *
+	 * @since 1.0.0
+	 */
+	// public function register_shortcodes() {
+	// 		add_shortcode(
+	// 		'resource_booking_form',
+	// 		array( $this, 'display_booking_form' )
+	// 	);
+
+	// }
 }
