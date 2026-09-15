@@ -150,6 +150,7 @@ class Resource_Booking_Public
 				<input type="datetime-local" id="end_datetime" name="end_datetime" required>
 			</p>
 
+			<p id="resource-booking-availability"></p>
 			<button type="submit">Submit Booking</button>
 
 		</form>
