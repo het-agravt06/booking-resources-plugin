@@ -598,12 +598,12 @@ class Resource_Booking_Admin
 		echo '<h1>Bookings</h1>';
 
 
-		echo '<form method="get">';
+		echo '<form method="get" id="resource-booking-filters">';
 
 		echo '<input type="hidden" name="page" value="resource-booking-bookings">';
 
 		//Add Status dropdown
-		echo '<select name="status">';
+		echo '<select name="status" id="rb_status_filter">';
 
 		echo '<option value="">All Statuses</option>';
 		echo '<option value="pending"' . selected( $status, 'pending', false ) . '>Pending</option>';
@@ -614,7 +614,7 @@ class Resource_Booking_Admin
 		echo '</select>';
 
 		// 	Add Resource dropdown
-		echo '<select name="resource_id">';
+		echo '<select name="resource_id" id="rb_resource_filter">';
 
 		echo '<option value="0">All Resources</option>';
 			foreach ( $resources as $resource ) {
@@ -626,13 +626,84 @@ class Resource_Booking_Admin
 		echo '</select>';
 
 
-		submit_button( 'Filter', 'secondary', 'filter', false );
+		echo '<button type="button" class="button" id="rb_apply_filters">Filter</button>';
 
 		echo '</form>';
 
+		echo '<div id="resource-booking-bookings" data-current-page="' . esc_attr( $current_page ) . '">';
+		echo $this->get_bookings_table_html( $status, $resource_id, $current_page );
+		echo '</div>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Render the bookings table HTML (used by both the page and AJAX).
+	 */
+	private function get_bookings_table_html( $status, $resource_id, $current_page ) {
+
+		global $wpdb;
+
+		$bookings_table  = $wpdb->prefix . 'rb_bookings';
+		$resources_table = $wpdb->prefix . 'rb_resources';
+
+		$where = array();
+
+		if ( ! empty( $status ) ) {
+			$where[] = $wpdb->prepare(
+				'bookings.status = %s',
+				$status
+			);
+		}
+
+		if ( ! empty( $resource_id ) ) {
+			$where[] = $wpdb->prepare(
+				'bookings.resource_id = %d',
+				$resource_id
+			);
+		}
+
+		$where_sql = '';
+
+		if ( ! empty( $where ) ) {
+			$where_sql = 'WHERE ' . implode( ' AND ', $where );
+		}
+
+		$per_page = 3;
+		$offset   = ( $current_page - 1 ) * $per_page;
+
+		$total_bookings = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			FROM {$bookings_table} AS bookings
+			{$where_sql}"
+		);
+
+		$total_pages = max( 1, (int) ceil( $total_bookings / $per_page ) );
+
+		if ( $current_page > $total_pages ) {
+			$current_page = $total_pages;
+			$offset       = ( $current_page - 1 ) * $per_page;
+		}
+
+		$bookings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT bookings.*, resources.name AS resource_name
+				FROM {$bookings_table} AS bookings
+				LEFT JOIN {$resources_table} AS resources
+					ON bookings.resource_id = resources.id
+				{$where_sql}
+				ORDER BY bookings.id DESC
+				LIMIT %d OFFSET %d",
+				$per_page,
+				$offset
+			)
+		);
+
+		ob_start();
+
 		if ( empty( $bookings ) ) {
 			echo '<p>No bookings found.</p>';
-			return;
+			return ob_get_clean();
 		}
 
 		echo '<table class="widefat fixed striped">';
@@ -654,41 +725,28 @@ class Resource_Booking_Admin
 		foreach ( $bookings as $booking ) {
 
 			echo '<tr>';
-
 			echo '<td>' . esc_html( $booking->id ) . '</td>';
 			echo '<td>' . esc_html( $booking->resource_name ) . '</td>';
 			echo '<td>' . esc_html( $booking->customer_name ) . '</td>';
 			echo '<td>' . esc_html( $booking->customer_email ) . '</td>';
 			echo '<td>' . esc_html( $booking->start_datetime ) . '</td>';
 			echo '<td>' . esc_html( $booking->end_datetime ) . '</td>';
-			echo '<td>' . esc_html( ucfirst( $booking->status ) ) . '</td>';
-			
+			echo '<td><span class="rb-status rb-status-' . esc_attr( $booking->status ) . '">'
+				. esc_html( ucfirst( $booking->status ) ) . '</span></td>';
+
 			echo '<td>';
 			echo '<a href="' . esc_url(
 				admin_url( 'admin.php?page=resource-booking-edit-booking&booking_id=' . $booking->id )
-			) . '" class="button">Edit</a>';
+			) . '" class="button">Edit</a> ';
+
 			if ( 'pending' === $booking->status ) {
-					//confirm button
-					echo '<form method="post" style="display:inline-block; margin-right:5px;">';
-					wp_nonce_field( 'resource_booking_confirm', 'resource_booking_nonce' );
-					echo '<input type="hidden" name="booking_id" value="' . esc_attr( $booking->id ) . '">';
-					echo '<input type="hidden" name="resource_booking_action" value="confirm">';
-					echo '<button type="submit" class="button button-primary">Confirm</button>';
-					echo '</form>';
-
-					//cancle button
-					echo '<form method="post" style="display:inline-block;">';
-					wp_nonce_field( 'resource_booking_reject', 'resource_booking_nonce' );
-					echo '<input type="hidden" name="booking_id" value="' . esc_attr( $booking->id ) . '">';
-					echo '<input type="hidden" name="resource_booking_action" value="reject">';
-					echo '<button type="submit" class="button">Reject</button>';
-					echo '</form>';
-
-				}
+				echo '<button type="button" class="button button-primary rb-booking-action" data-booking-id="'
+					. esc_attr( $booking->id ) . '" data-rb-action="confirm">Confirm</button> ';
+				echo '<button type="button" class="button rb-booking-action" data-booking-id="'
+					. esc_attr( $booking->id ) . '" data-rb-action="reject">Reject</button>';
+			}
 
 			echo '</td>';
-			
-
 			echo '</tr>';
 		}
 
@@ -697,33 +755,207 @@ class Resource_Booking_Admin
 
 		if ( $total_pages > 1 ) {
 
+			$page_url = admin_url( 'admin.php?page=resource-booking-bookings' );
+
+			if ( ! empty( $status ) ) {
+				$page_url = add_query_arg( 'status', $status, $page_url );
+			}
+
+			if ( ! empty( $resource_id ) ) {
+				$page_url = add_query_arg( 'resource_id', $resource_id, $page_url );
+			}
+
 			echo '<div class="tablenav" style="margin-top:20px;">';
 			echo '<div class="tablenav-pages" style="float:none; text-align:center;">';
 
-			echo paginate_links(
-				array(
-					'base'      => add_query_arg( 'paged', '%#%' ),
-					'format'    => '',
-					'current'   => $current_page,
-					'total'     => $total_pages,
-					'prev_text' => '&laquo; Previous',
-					'next_text' => 'Next &raquo;',
-					'type'      => 'plain',
+			if ( $current_page > 1 ) {
+				echo '<a href="' . esc_url( add_query_arg( 'paged', $current_page - 1, $page_url ) )
+					. '" class="rb-pagination-link" data-page="'
+					. esc_attr( $current_page - 1 ) . '">&laquo; Previous</a>';
+			}
+
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				if ( $i === $current_page ) {
+					echo '<span class="page-numbers current" aria-current="page">'
+						. esc_html( $i ) . '</span>';
+				} else {
+					echo '<a href="' . esc_url( add_query_arg( 'paged', $i, $page_url ) )
+						. '" class="rb-pagination-link" data-page="' . esc_attr( $i ) . '">'
+						. esc_html( $i ) . '</a>';
+				}
+			}
+
+			if ( $current_page < $total_pages ) {
+				echo '<a href="' . esc_url( add_query_arg( 'paged', $current_page + 1, $page_url ) )
+					. '" class="rb-pagination-link" data-page="'
+					. esc_attr( $current_page + 1 ) . '">Next &raquo;</a>';
+			}
+
+			echo '</div>';
+			echo '</div>';
+		}
+
+		return ob_get_clean();
+	}
+
+	/**
+	 * AJAX handler: load filtered/paginated bookings table.
+	 */
+	public function ajax_get_bookings() {
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'You do not have permission to view bookings.' ) );
+		}
+
+		check_ajax_referer( 'resource_booking_admin', 'nonce' );
+
+		$status       = isset( $_POST['status'] )
+			? sanitize_text_field( wp_unslash( $_POST['status'] ) )
+			: '';
+		$resource_id  = isset( $_POST['resource_id'] )
+			? absint( $_POST['resource_id'] )
+			: 0;
+		$current_page = isset( $_POST['paged'] )
+			? max( 1, absint( $_POST['paged'] ) )
+			: 1;
+
+		$allowed_statuses = array( 'pending', 'confirmed', 'cancelled', 'expired' );
+
+		if ( $status && ! in_array( $status, $allowed_statuses, true ) ) {
+			$status = '';
+		}
+
+		$html = $this->get_bookings_table_html( $status, $resource_id, $current_page );
+
+		wp_send_json_success( array(
+			'html'         => $html,
+			'current_page' => $current_page,
+		) );
+	}
+
+	/**
+	 * AJAX handler: confirm or reject a booking.
+	 */
+	public function ajax_update_booking_status() {
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'You do not have permission to manage bookings.' ) );
+		}
+
+		check_ajax_referer( 'resource_booking_admin', 'nonce' );
+
+		$booking_id = isset( $_POST['booking_id'] )
+			? absint( $_POST['booking_id'] )
+			: 0;
+		$action     = isset( $_POST['rb_action'] )
+			? sanitize_text_field( wp_unslash( $_POST['rb_action'] ) )
+			: '';
+
+		if ( ! $booking_id || ! in_array( $action, array( 'confirm', 'reject' ), true ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid request.' ) );
+		}
+
+		global $wpdb;
+
+		$bookings_table = $wpdb->prefix . 'rb_bookings';
+
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$bookings_table} WHERE id = %d",
+				$booking_id
+			)
+		);
+
+		if ( ! $booking ) {
+			wp_send_json_error( array( 'message' => 'Booking not found.' ) );
+		}
+
+		if ( 'pending' !== $booking->status ) {
+			wp_send_json_error( array( 'message' => 'This booking can no longer be confirmed or rejected.' ) );
+		}
+
+		$new_status = ( 'confirm' === $action ) ? 'confirmed' : 'cancelled';
+
+		if ( 'confirm' === $action ) {
+			$overlapping = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id
+					FROM {$bookings_table}
+					WHERE resource_id = %d
+					AND id != %d
+					AND status IN ('pending', 'confirmed')
+					AND start_datetime < %s
+					AND end_datetime > %s
+					LIMIT 1",
+					$booking->resource_id,
+					$booking_id,
+					$booking->end_datetime,
+					$booking->start_datetime
 				)
 			);
 
-			echo '</div>';
-			echo '</div>';
-
-			echo '<style>
-				.tablenav-pages a,
-				.tablenav-pages span {
-					font-size: 16px;
-					padding: 5px 10px;
-					margin: 10px 3px;
-				}
-			</style>';
+			if ( $overlapping ) {
+				wp_send_json_error( array( 'message' => 'Cannot confirm: the time overlaps with another booking.' ) );
+			}
 		}
+
+		$updated = $wpdb->update(
+			$bookings_table,
+			array(
+				'status'     => $new_status,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $booking_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			wp_send_json_error( array( 'message' => 'Failed to update the booking.' ) );
+		}
+
+		// Send email notification.
+		$resources_table = $wpdb->prefix . 'rb_resources';
+		$resource_name   = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT name FROM {$resources_table} WHERE id = %d",
+				$booking->resource_id
+			)
+		);
+
+		if ( 'confirmed' === $new_status ) {
+			wp_mail(
+				$booking->customer_email,
+				'Booking Confirmed',
+				'Hello ' . $booking->customer_name . ",\n\n" .
+				'Your booking has been confirmed successfully.' . "\n\n" .
+				'Resource: ' . $resource_name . "\n" .
+				'Start: ' . $booking->start_datetime . "\n" .
+				'End: ' . $booking->end_datetime . "\n" .
+				'Status: Confirmed' . "\n\n" .
+				'Thank you.'
+			);
+		} else {
+			wp_mail(
+				$booking->customer_email,
+				'Booking Cancelled',
+				'Hello ' . $booking->customer_name . ",\n\n" .
+				'Your booking request has been cancelled.' . "\n\n" .
+				'Resource: ' . $resource_name . "\n" .
+				'Start: ' . $booking->start_datetime . "\n" .
+				'End: ' . $booking->end_datetime . "\n" .
+				'Status: Cancelled' . "\n\n" .
+				'Thank you.'
+			);
+		}
+
+		wp_send_json_success( array(
+			'message'    => ( 'confirmed' === $new_status )
+				? 'Booking confirmed successfully.'
+				: 'Booking cancelled successfully.',
+			'booking_id' => $booking_id,
+			'status'     => $new_status,
+		) );
 	}
 
 	//edit booking 
@@ -1358,6 +1590,14 @@ class Resource_Booking_Admin
 		 */
 
 		wp_enqueue_script($this->plugin_name, plugin_dir_url(__FILE__) . 'js/resource-booking-admin.js', array('jquery'), $this->version, false);
+		wp_localize_script(
+			$this->plugin_name,
+			'resourceBookingAdmin',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'resource_booking_admin' ),
+			)
+		);
 	}
 
 	public function booking_admin_notices() {

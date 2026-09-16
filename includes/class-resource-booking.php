@@ -168,6 +168,8 @@ class Resource_Booking {
 		$this->loader->add_action( 'admin_menu',$plugin_admin,'add_admin_menu');
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_booking_actions' );
 		$this->loader->add_action( 'admin_notices', $plugin_admin, 'booking_admin_notices' );
+		$this->loader->add_action( 'wp_ajax_resource_booking_get_bookings', $plugin_admin, 'ajax_get_bookings' );
+		$this->loader->add_action( 'wp_ajax_resource_booking_update_booking_status', $plugin_admin, 'ajax_update_booking_status' );
 	}
 
 	/**

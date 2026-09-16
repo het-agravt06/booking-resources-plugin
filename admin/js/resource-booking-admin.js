@@ -1,64 +1,145 @@
-(function( $ ) {
-	'use strict';
+(function ($) {
+  "use strict";
 
-	/**
-	 * All of the code for your admin-facing JavaScript source
-	 * should reside in this file.
-	 *
-	 * Note: It has been assumed you will write jQuery code here, so the
-	 * $ function reference has been prepared for usage within the scope
-	 * of this function.
-	 */
+  $(document).ready(function () {
+    // ----------------------------------------------------------
+    // Media library (resource images).
+    // ----------------------------------------------------------
+    $("#resource_image_button").on("click", function (event) {
+      event.preventDefault();
 
-	// Open media file.
-	$(document).ready(function () {
+      var image_frame = wp.media({
+        title: "Select Resource Image",
+        button: {
+          text: "Use This Image",
+        },
+        multiple: true,
+      });
 
-		$('#resource_image_button').on('click', function (event) {
+      image_frame.on("select", function () {
+        var attachments = image_frame.state().get("selection").toJSON();
+        var image_ids = [];
+        var preview_html = "";
 
-			event.preventDefault();
+        $.each(attachments, function (index, attachment) {
+          image_ids.push(attachment.id);
 
-			var image_frame = wp.media({
-				title: 'Select Resource Image',
-				button: {
-					text: 'Use This Image'
-				},
-				multiple: true
-			});
+          preview_html +=
+            '<img src="' +
+            attachment.url +
+            '" style="max-width: 150px; height: auto; margin: 5px;">';
+        });
 
-			image_frame.on('select', function () {
+        $("#resource_image_ids").val(image_ids.join(","));
 
-				var attachments = image_frame.state().get('selection').toJSON();
-				var image_ids = [];
-				var preview_html = '';
+        $("#resource_image_preview").html(preview_html);
+      });
 
-				$.each(attachments, function (index, attachment) {
+      image_frame.open();
+    });
 
-					image_ids.push(attachment.id);
+    // Remove image.
+    $("#resource_image_remove_button").on("click", function (event) {
+      event.preventDefault();
 
-					preview_html +=
-						'<img src="' + attachment.url + '" style="max-width: 150px; height: auto; margin: 5px;">';
+      $("#resource_image_ids").val("");
 
-				});
+      $("#resource_image_preview").html("");
+    });
 
-				$('#resource_image_ids').val(image_ids.join(','));
+    // ----------------------------------------------------------
+    // Bookings list: AJAX filters, pagination, confirm / reject.
+    // ----------------------------------------------------------
+    var $tableWrapper = $("#resource-booking-bookings");
 
-				$('#resource_image_preview').html(preview_html);
-			});
+    if ($tableWrapper.length) {
+      function rbLoadBookings(paged) {
+        var data = {
+          action: "resource_booking_get_bookings",
+          nonce: resourceBookingAdmin.nonce,
+          status: $("#rb_status_filter").val(),
+          resource_id: $("#rb_resource_filter").val(),
+          paged: paged,
+        };
 
-			image_frame.open();
-		});
+        $tableWrapper.addClass("resource-booking-loading");
 
-		// Remove image.
-		$('#resource_image_remove_button').on('click', function (event) {
+        $.post(resourceBookingAdmin.ajaxUrl, data, function (response) {
+          $tableWrapper.removeClass("resource-booking-loading");
 
-			event.preventDefault();
+          if (response.success) {
+            $tableWrapper
+              .data("current-page", response.data.current_page)
+              .attr(
+                "data-current-page",
+                response.data.current_page,
+              )
+              .html(response.data.html);
+          } else {
+            $tableWrapper.html(
+              "<p>" + (response.data.message || "Error loading bookings.") + "</p>",
+            );
+          }
+        });
+      }
 
-			$('#resource_image_id').val('');
+      // Filter button.
+      $("#rb_apply_filters").on("click", function () {
+        rbLoadBookings(1);
+      });
 
-			$('#resource_image_preview').html('');
+      // Filter selects also apply immediately.
+      $("#rb_status_filter, #rb_resource_filter").on("change", function () {
+        rbLoadBookings(1);
+      });
 
-		});
+      // Prevent native form submit (no-JS fallback is fine; JS intercepts).
+      $("#resource-booking-filters").on("submit", function (event) {
+        event.preventDefault();
+        rbLoadBookings(1);
+      });
 
-	});
+      // Pagination links (delegated).
+      $tableWrapper.on("click", "a.rb-pagination-link", function (event) {
+        event.preventDefault();
 
-})( jQuery );
+        rbLoadBookings($(this).data("page"));
+      });
+
+      // Confirm / reject actions (delegated).
+      $tableWrapper.on("click", ".rb-booking-action", function (event) {
+        event.preventDefault();
+
+        var $button = $(this);
+        var actionLabel =
+          $button.data("rb-action") === "confirm" ? "confirm" : "reject";
+
+        if (!window.confirm("Are you sure you want to " + actionLabel + " this booking?")) {
+          return;
+        }
+
+        var data = {
+          action: "resource_booking_update_booking_status",
+          nonce: resourceBookingAdmin.nonce,
+          booking_id: $button.data("booking-id"),
+          rb_action: $button.data("rb-action"),
+        };
+
+        $button.prop("disabled", true);
+
+        $.post(resourceBookingAdmin.ajaxUrl, data, function (response) {
+          $button.prop("disabled", false);
+
+          if (response.success) {
+            // Show success notice inline, then re-load current page.
+            var currentPage = $tableWrapper.data("current-page") || 1;
+
+            rbLoadBookings(currentPage);
+          } else {
+            window.alert(response.data.message || "Action failed.");
+          }
+        });
+      });
+    }
+  });
+})(jQuery);

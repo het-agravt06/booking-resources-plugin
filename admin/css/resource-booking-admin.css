@@ -1,4 +1,61 @@
-/**
- * All of the CSS for your admin-specific functionality should be
- * included in this file.
- */
+/* Resource Booking – admin styles */
+
+/* Table loading state. */
+#resource-booking-bookings.resource-booking-loading {
+	opacity: 0.5;
+	pointer-events: none;
+	transition: opacity 0.15s ease;
+}
+
+/* Booking action buttons. */
+.rb-booking-action {
+	margin-left: 6px !important;
+	cursor: pointer;
+}
+
+/* Status badge. */
+.rb-status {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+.rb-status-pending {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.rb-status-confirmed {
+	background: #d4edda;
+	color: #155724;
+}
+
+.rb-status-cancelled {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.rb-status-expired {
+	background: #e2e3e5;
+	color: #383d41;
+}
+
+/* Filter controls. */
+#resource-booking-filters {
+	margin: 15px 0 20px;
+}
+
+#resource-booking-filters select {
+	margin-right: 8px;
+}
+
+/* Pagination overrides. */
+.tablenav-pages a.rb-pagination-link,
+.tablenav-pages span.page-numbers {
+	font-size: 14px;
+	padding: 4px 10px;
+	margin: 0 2px;
+}
