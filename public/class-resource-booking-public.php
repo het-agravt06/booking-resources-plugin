@@ -130,6 +130,9 @@ class Resource_Booking_Public
 				</select>
 			</p>
 
+			<div id="resource-details"></div>
+			<div id="resource-image"></div>
+			
 			<p>
 				<label for="customer_name">Name</label>
 				<input type="text" id="customer_name" name="customer_name" required>

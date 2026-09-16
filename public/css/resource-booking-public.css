@@ -2,3 +2,131 @@
  * All of the CSS for your public-facing functionality should be
  * included in this file.
  */
+
+#resource-booking-form {
+	max-width: 600px;
+	margin: 30px auto;
+	padding: 25px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	background: #fff;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.08 );
+}
+
+#resource-booking-form p {
+	margin-bottom: 20px;
+}
+
+#resource-booking-form label {
+	display: block;
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+#resource-booking-form input,
+#resource-booking-form select {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 15px;
+	box-sizing: border-box;
+}
+
+#resource-booking-form input:focus,
+#resource-booking-form select:focus {
+	border-color: #2271b1;
+	outline: none;
+	box-shadow: 0 0 0 1px #2271b1;
+}
+
+#resource-booking-form button {
+	padding: 11px 20px;
+	border: none;
+	border-radius: 4px;
+	background: #2271b1;
+	color: #fff;
+	font-size: 15px;
+	cursor: pointer;
+}
+
+#resource-booking-form button:hover {
+	background: #135e96;
+}
+
+#resource-booking-availability,
+#resource-booking-message {
+	margin-top: 15px;
+	font-weight: 600;
+}
+
+#resource-booking-availability {
+	padding: 10px;
+}
+
+#resource-booking-message {
+	padding: 10px;
+}
+
+@media ( max-width: 600px ) {
+
+	#resource-booking-form {
+		margin: 20px 10px;
+		padding: 20px;
+	}
+
+}
+
+.resource-booking-success {
+	padding: 10px;
+	margin-top: 15px;
+	border: 1px solid #46b450;
+	background: #f0fff0;
+}
+
+.resource-booking-error {
+	padding: 10px;
+	margin-top: 15px;
+	border: 1px solid #dc3232;
+	background: #fff0f0;
+}
+
+.resource-booking-warning {
+	padding: 10px;
+	margin-top: 15px;
+	border: 1px solid #ffb900;
+	background: #fff8e5;
+}
+
+.resource-booking-info {
+	padding: 10px;
+	margin-top: 15px;
+	border: 1px solid #72aee6;
+	background: #f0f7ff;
+}
+
+
+#resource-details {
+	margin-top: 15px;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	background: #f8f9fa;
+}
+
+#resource-details p {
+	margin-bottom: 8px;
+}
+
+#resource-image {
+	margin-top: 15px;
+}
+
+#resource-image img {
+	display: block;
+	max-width: 300px;
+	width: 100%;
+	height: auto;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+}

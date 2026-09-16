@@ -469,11 +469,22 @@ class Resource_Booking_REST_API
         $resources_table = $wpdb->prefix . 'rb_resources';
 
         $resources = $wpdb->get_results(
-            "SELECT id, name, description, capacity
+            "SELECT id, name, description, capacity, image_id
             FROM {$resources_table}
             ORDER BY name ASC"
         );
 
+        foreach ( $resources as $resource ) {
+
+            $resource->image_url = '';
+
+            if ( $resource->image_id ) {
+                $resource->image_url = wp_get_attachment_image_url(
+                    $resource->image_id,
+                    'medium'
+                );
+            }
+        }
         return rest_ensure_response( $resources );
     }
 }
