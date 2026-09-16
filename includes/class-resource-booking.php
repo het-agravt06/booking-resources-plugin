@@ -180,7 +180,7 @@ class Resource_Booking {
 	private function define_public_hooks() {
 
 		$plugin_public = new Resource_Booking_Public( $this->get_plugin_name(), $this->get_version() );
-		// $this->loader->add_action( 'init', $plugin_public, 'register_shortcodes' );
+		$this->loader->add_action( 'init', $plugin_public, 'register_shortcodes' );
 		$plugin_rest_api = new Resource_Booking_REST_API();
 		
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );

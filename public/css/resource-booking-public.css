@@ -60,21 +60,9 @@
 	font-weight: 600;
 }
 
-#resource-booking-availability {
-	padding: 10px;
-}
-
+#resource-booking-availability,
 #resource-booking-message {
 	padding: 10px;
-}
-
-@media ( max-width: 600px ) {
-
-	#resource-booking-form {
-		margin: 20px 10px;
-		padding: 20px;
-	}
-
 }
 
 .resource-booking-success {
@@ -105,7 +93,6 @@
 	background: #f0f7ff;
 }
 
-
 #resource-details {
 	margin-top: 15px;
 	padding: 15px;
@@ -129,4 +116,83 @@
 	height: auto;
 	border-radius: 6px;
 	border: 1px solid #ddd;
+}
+
+/* Resources */
+
+#resource-booking-resources {
+	display: grid !important;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	gap: 25px !important;
+	width: 100% !important;
+	max-width: 1200px !important;
+	margin: 30px auto !important;
+	box-sizing: border-box !important;
+}
+
+#resource-booking-resources .resource-card {
+	display: block !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding: 20px !important;
+	border: 1px solid #ddd !important;
+	border-radius: 8px !important;
+	background: #fff !important;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.08 ) !important;
+	box-sizing: border-box !important;
+}
+
+#resource-booking-resources .resource-card-images {
+	display: flex !important;
+	gap: 10px !important;
+	width: 100% !important;
+	overflow-x: auto !important;
+	margin-bottom: 15px !important;
+}
+
+#resource-booking-resources .resource-card-images a {
+	display: block !important;
+	flex-shrink: 0 !important;
+}
+
+#resource-booking-resources .resource-card-images img {
+	display: block !important;
+	width: 180px !important;
+	height: 130px !important;
+	object-fit: cover !important;
+	border-radius: 6px !important;
+}
+
+#resource-booking-resources .resource-card h3 {
+	display: block !important;
+	margin: 10px 0 !important;
+}
+
+#resource-booking-resources .resource-card p {
+	display: block !important;
+	margin: 0 0 8px !important;
+}
+
+@media ( max-width: 900px ) {
+
+	#resource-booking-resources {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	}
+
+}
+
+@media ( max-width: 600px ) {
+
+	#resource-booking-resources {
+		grid-template-columns: 1fr !important;
+	}
+
+}
+
+@media ( min-width: 901px ) {
+
+	#resource-booking-resources {
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	}
+
 }

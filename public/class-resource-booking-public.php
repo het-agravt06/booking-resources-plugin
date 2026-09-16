@@ -53,9 +53,6 @@ class Resource_Booking_Public
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-		add_action('init', function () {
-			add_shortcode('test_booking_form', array($this, 'display_booking_form'));
-		});
 	}
 
 	/**
@@ -106,7 +103,8 @@ class Resource_Booking_Public
 			$this->plugin_name,
 			'resourceBooking',
 			array(
-				'apiUrl' => esc_url_raw(rest_url('resource-booking/v1/')),
+				'apiUrl'     => esc_url_raw( rest_url( 'resource-booking/v1/' ) ),
+				'bookingUrl' => esc_url_raw( site_url( '/booking/' ) ),
 			)
 		);
 	}
@@ -164,6 +162,20 @@ class Resource_Booking_Public
 		return ob_get_clean();
 	}
 
+
+
+	public function display_resources() {
+
+		ob_start();
+
+		?>
+
+		<div id="resource-booking-resources"></div>
+
+		<?php
+
+		return ob_get_clean();
+	}
 	/**
 	 * Register public shortcodes.
 	 *
@@ -176,4 +188,18 @@ class Resource_Booking_Public
 	// 	);
 
 	// }
+
+	public function register_shortcodes() {
+
+		add_shortcode(
+			'test_booking_form',
+			array( $this, 'display_booking_form' )
+		);
+
+		add_shortcode(
+			'resource_booking_resources',
+			array( $this, 'display_resources' )
+		);
+
+	}
 }
