@@ -28,7 +28,7 @@ class Resource_Booking_Database {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(255) NOT NULL,
 			description text NOT NULL,
-			image_id bigint(20) unsigned DEFAULT NULL,
+			image_id longtext DEFAULT NULL,	
 			capacity int(11) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,

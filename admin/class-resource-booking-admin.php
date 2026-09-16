@@ -952,8 +952,11 @@ class Resource_Booking_Admin
 			$resource_name        = isset($_POST['resource_name']) ? sanitize_text_field(wp_unslash($_POST['resource_name'])) : '';  //"10" → 10
 			$resource_description = isset($_POST['resource_description']) ? sanitize_textarea_field(wp_unslash($_POST['resource_description'])) : '';  //"5abc" → 5
 			$resource_capacity    = isset($_POST['resource_capacity']) ? absint($_POST['resource_capacity']) : 0;   // e.g. "-3" → 0
-			$resource_image_id = isset( $_POST['resource_image_id'] ) ? absint( $_POST['resource_image_id'] ) : 0;
-			
+			$resource_image_ids = isset( $_POST['resource_image_ids'] )
+				? array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_POST['resource_image_ids'] ) ) ) )
+				: array();
+			$resource_image_ids = array_filter( $resource_image_ids );
+
 			//validate value
 			if (empty($resource_name)) {
 				wp_die('Resource name is required.');
@@ -973,7 +976,7 @@ class Resource_Booking_Admin
 				array(
 					'name'        => $resource_name,
 					'description' => $resource_description,
-					'image_id' => $resource_image_id,
+					'image_id' => maybe_serialize($resource_image_ids),
 					'capacity'    => $resource_capacity,
 					'created_at'  => current_time('mysql'),
 					'updated_at'  => current_time('mysql'),
@@ -981,7 +984,7 @@ class Resource_Booking_Admin
 				array(
 					'%s',
 					'%s',
-					'%d',
+					'%s',
 					'%d',
 					'%s',
 					'%s',
@@ -1020,9 +1023,9 @@ class Resource_Booking_Admin
 			echo '<th><label for="resource_image">Resource Image</label></th>';
 			echo '<td>';
 
-			echo '<input type="hidden" name="resource_image_id" id="resource_image_id" value="">';
+			echo '<input type="hidden" name="resource_image_ids" id="resource_image_ids" value="">';
 
-			echo '<button type="button" class="button" id="resource_image_button">Select Image</button>';
+			echo '<button type="button" class="button" id="resource_image_button">Select Images</button>';
 
 			echo '<div id="resource_image_preview"></div>';
 
@@ -1082,7 +1085,11 @@ class Resource_Booking_Admin
 			// Sanitize form values.
 			$resource_name        = isset($_POST['resource_name']) ? sanitize_text_field(wp_unslash($_POST['resource_name'])) : '';
 			$resource_description = isset($_POST['resource_description']) ? sanitize_textarea_field(wp_unslash($_POST['resource_description'])) : '';
-			$resource_image_id    = isset( $_POST['resource_image_id'] ) ? absint( $_POST['resource_image_id'] ) : 0;
+			$resource_image_ids = isset( $_POST['resource_image_ids'] )
+				? array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_POST['resource_image_ids'] ) ) ) )
+				: array();
+
+			$resource_image_ids = array_filter( $resource_image_ids );
 			$resource_capacity    = isset($_POST['resource_capacity']) ? absint($_POST['resource_capacity']) : 0;
 			
 			// Validate form values.
@@ -1100,7 +1107,7 @@ class Resource_Booking_Admin
 				array(
 					'name'        => $resource_name,
 					'description' => $resource_description,
-					'image_id'    => $resource_image_id,
+					'image_id'    => maybe_serialize( $resource_image_ids),
 					'capacity'    => $resource_capacity,
 					'updated_at'  => current_time('mysql'),
 				),
@@ -1108,6 +1115,7 @@ class Resource_Booking_Admin
 					'id' => $resource_id,
 				),
 				array(
+					'%s',
 					'%s',
 					'%s',
 					'%d',
@@ -1168,30 +1176,40 @@ class Resource_Booking_Admin
 			echo '<th><label for="resource_image">Resource Image</label></th>';
 		echo '<td>';
 
-		echo '<input type="hidden" name="resource_image_id" id="resource_image_id" value="' . esc_attr( $resource->image_id ) . '">';
+		$image_ids = maybe_unserialize( $resource->image_id );
 
-		if ( ! empty( $resource->image_id ) ) {
+		if ( ! is_array( $image_ids ) ) {
+			$image_ids = array();
+		}
 
-			echo '<div id="resource_image_preview">';
+		echo '<input type="hidden" name="resource_image_ids" id="resource_image_ids" value="' . esc_attr( implode( ',', $image_ids ) ) . '">';
+
+		$image_ids = maybe_unserialize( $resource->image_id );
+
+		if ( ! is_array( $image_ids ) ) {
+			$image_ids = array();
+		}
+
+		echo '<div id="resource_image_preview">';
+
+		foreach ( $image_ids as $image_id ) {
+
 			echo wp_get_attachment_image(
-				$resource->image_id,
+				$image_id,
 				'medium',
 				false,
 				array(
-					'style' => 'max-width: 200px; height: auto;'
+					'style' => 'max-width: 200px; height: auto; margin: 5px;'
 				)
 			);
-			echo '</div>';
-
-		} else {
-
-			echo '<div id="resource_image_preview"></div>';
 
 		}
 
+		echo '</div>';
+
 		echo '<p>';
-		echo '<button type="button" class="button" id="resource_image_button">Select Image</button>';
-		echo '<button type="button" class="button" id="resource_image_remove_button">Remove Image</button>';
+		echo '<button type="button" class="button" id="resource_image_button">Select Images</button>';
+		echo '<button type="button" class="button" id="resource_image_remove_button">Remove Images</button>';
 		echo '</p>';
 
 		echo '</td>';
@@ -1265,7 +1283,7 @@ class Resource_Booking_Admin
 		}
 
 		// Delete resource.
-		$result = $wpdb->delete(
+		$result = $wpdb-> delete(
 			$resources_table,
 			array(
 				'id' => $resource_id,

@@ -22,18 +22,27 @@
 				button: {
 					text: 'Use This Image'
 				},
-				multiple: false
+				multiple: true
 			});
 
 			image_frame.on('select', function () {
 
-				var attachment = image_frame.state().get('selection').first().toJSON();
+				var attachments = image_frame.state().get('selection').toJSON();
+				var image_ids = [];
+				var preview_html = '';
 
-				$('#resource_image_id').val(attachment.id);
+				$.each(attachments, function (index, attachment) {
 
-				$('#resource_image_preview').html(
-					'<img src="' + attachment.url + '" style="max-width: 200px; height: auto;">'
-				);
+					image_ids.push(attachment.id);
+
+					preview_html +=
+						'<img src="' + attachment.url + '" style="max-width: 150px; height: auto; margin: 5px;">';
+
+				});
+
+				$('#resource_image_ids').val(image_ids.join(','));
+
+				$('#resource_image_preview').html(preview_html);
 			});
 
 			image_frame.open();

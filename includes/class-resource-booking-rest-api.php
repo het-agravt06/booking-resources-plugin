@@ -476,15 +476,30 @@ class Resource_Booking_REST_API
 
         foreach ( $resources as $resource ) {
 
-            $resource->image_url = '';
+            $resource->image_urls = array();
 
             if ( $resource->image_id ) {
-                $resource->image_url = wp_get_attachment_image_url(
-                    $resource->image_id,
-                    'medium'
-                );
+
+                $image_ids = maybe_unserialize( $resource->image_id );
+
+                if ( ! is_array( $image_ids ) ) {
+                    $image_ids = array( $image_ids );
+                }
+
+                foreach ( $image_ids as $image_id ) {
+
+                    $image_url = wp_get_attachment_image_url(
+                        $image_id,
+                        'medium'
+                    );
+
+                    if ( $image_url ) {
+                        $resource->image_urls[] = $image_url;
+                    }
+                }
             }
         }
+        
         return rest_ensure_response( $resources );
     }
 }

@@ -46,6 +46,7 @@
 			today + 'T00:00'
 		);
 
+		console.log( resourceBooking.apiUrl + 'resources' );
 		// Get resources.
 		$.ajax({
 			url: resourceBooking.apiUrl + 'resources',
@@ -102,16 +103,22 @@
 
 					$( '#resource-image' ).html( '' );
 
-					if ( resource.image_id ) {
+				if ( resource.image_urls && resource.image_urls.length > 0 ) {
 
-						$( '#resource-image' ).html(
-							'<p><strong>Image:</strong></p>' +
+					var image_html = '<p><strong>Images:</strong></p>';
+
+					$.each( resource.image_urls, function( index, image_url ) {
+
+						image_html +=
 							'<img src="' +
-							resource.image_url +
+							image_url +
 							'" alt="' +
 							resource.name +
-							'" style="max-width: 300px; height: auto;">'
-						);
+							'" style="max-width: 200px; height: auto; margin: 5px;">';
+
+					});
+
+					$( '#resource-image' ).html( image_html );
 
 					}
 
