@@ -79,6 +79,38 @@ class Resource_Booking_Public
 	}
 
 	/**
+	 * Get the URL of the page containing the booking form shortcode.
+	 *
+	 * Detects the page that has [test_booking_form] and returns its permalink.
+	 * Result is cached in a transient for performance.
+	 *
+	 * @since  1.0.0
+	 * @return string
+	 */
+	public function get_booking_page_url() {
+
+		$booking_url = get_transient( 'resource_booking_page_url' );
+
+		if ( $booking_url ) {
+			return $booking_url;
+		}
+
+		// Fallback: page slug "resources-booking" (matches typical setup).
+		$booking_url = site_url( '/resources-booking/' );
+
+		foreach ( get_pages( array( 'post_status' => 'publish' ) ) as $page ) {
+			if ( has_shortcode( $page->post_content, 'test_booking_form' ) ) {
+				$booking_url = get_permalink( $page );
+				break;
+			}
+		}
+
+		set_transient( 'resource_booking_page_url', $booking_url, HOUR_IN_SECONDS );
+
+		return $booking_url;
+	}
+
+	/**
 	 * Register the JavaScript for the public-facing side of the site.
 	 *
 	 * @since    1.0.0
@@ -104,7 +136,7 @@ class Resource_Booking_Public
 			'resourceBooking',
 			array(
 				'apiUrl'     => esc_url_raw( rest_url( 'resource-booking/v1/' ) ),
-				'bookingUrl' => esc_url_raw( site_url( '/booking/' ) ),
+				'bookingUrl' => esc_url_raw( $this->get_booking_page_url() ),
 			)
 		);
 	}
