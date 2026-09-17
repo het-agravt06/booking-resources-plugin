@@ -184,6 +184,7 @@ class Resource_Booking_Public
 			</p>
 
 			<p id="resource-booking-availability"></p>
+			<p id="resource-booking-price"></p>
 			<button type="submit">Submit Booking</button>
 
 		</form>

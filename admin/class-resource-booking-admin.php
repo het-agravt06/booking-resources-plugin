@@ -1184,6 +1184,9 @@ class Resource_Booking_Admin
 			$resource_name        = isset($_POST['resource_name']) ? sanitize_text_field(wp_unslash($_POST['resource_name'])) : '';  //"10" → 10
 			$resource_description = isset($_POST['resource_description']) ? sanitize_textarea_field(wp_unslash($_POST['resource_description'])) : '';  //"5abc" → 5
 			$resource_capacity    = isset($_POST['resource_capacity']) ? absint($_POST['resource_capacity']) : 0;   // e.g. "-3" → 0
+			$resource_hourly_price = isset( $_POST['resource_hourly_price'] )
+				? floatval( wp_unslash( $_POST['resource_hourly_price'] ) )
+				: 0;
 			$resource_image_ids = isset( $_POST['resource_image_ids'] )
 				? array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_POST['resource_image_ids'] ) ) ) )
 				: array();
@@ -1198,6 +1201,10 @@ class Resource_Booking_Admin
 				wp_die('Resource capacity must be at least 1.');
 			}
 
+			if ( $resource_hourly_price <= 0 ) {
+				wp_die( 'Hourly price must be greater than 0.' );
+			}
+
 			//get wpdb object
 			global $wpdb;
 
@@ -1210,6 +1217,7 @@ class Resource_Booking_Admin
 					'description' => $resource_description,
 					'image_id' => maybe_serialize($resource_image_ids),
 					'capacity'    => $resource_capacity,
+					'hourly_price' => $resource_hourly_price,
 					'created_at'  => current_time('mysql'),
 					'updated_at'  => current_time('mysql'),
 				),
@@ -1218,6 +1226,7 @@ class Resource_Booking_Admin
 					'%s',
 					'%s',
 					'%d',
+					'%f',
 					'%s',
 					'%s',
 				)
@@ -1250,6 +1259,10 @@ class Resource_Booking_Admin
 		echo '<tr>';
 			echo '<th><label for="resource_capacity">Capacity / Quantity</label></th>';
 			echo '<td><input type="number" name="resource_capacity" id="resource_capacity" min="1" value="1" class="small-text"></td>';
+		echo '</tr>';
+		echo '<tr>';
+			echo '<th><label for="resource_hourly_price">Hourly Price</label></th>';
+			echo '<td><input type="number" id="resource_hourly_price" name="resource_hourly_price" min="0" step="0.01" required></td>';
 		echo '</tr>';
 		echo '<tr>';
 			echo '<th><label for="resource_image">Resource Image</label></th>';
@@ -1293,7 +1306,9 @@ class Resource_Booking_Admin
 
 		$resource = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$resources_table} WHERE id = %d",
+				"SELECT id, name, description, capacity, hourly_price, image_id
+				FROM {$resources_table}
+				WHERE id = %d",
 				$resource_id
 			)
 		);
@@ -1323,7 +1338,8 @@ class Resource_Booking_Admin
 
 			$resource_image_ids = array_filter( $resource_image_ids );
 			$resource_capacity    = isset($_POST['resource_capacity']) ? absint($_POST['resource_capacity']) : 0;
-			
+			$resource_hourly_price = isset( $_POST['resource_hourly_price'] ) ? floatval( $_POST['resource_hourly_price'] ) : 0;
+
 			// Validate form values.
 			if (empty($resource_name)) {
 				wp_die('Resource name is required.');
@@ -1341,6 +1357,7 @@ class Resource_Booking_Admin
 					'description' => $resource_description,
 					'image_id'    => maybe_serialize( $resource_image_ids),
 					'capacity'    => $resource_capacity,
+					'hourly_price' => $resource_hourly_price,
 					'updated_at'  => current_time('mysql'),
 				),
 				array(
@@ -1351,6 +1368,7 @@ class Resource_Booking_Admin
 					'%s',
 					'%s',
 					'%d',
+					'%f',
 					'%s',
 				),
 				array(
@@ -1402,7 +1420,12 @@ class Resource_Booking_Admin
 		echo '<th><label for="resource_capacity">Capacity / Quantity</label></th>';
 		echo '<td><input type="number" name="resource_capacity" id="resource_capacity" min="1" value="' . esc_attr($resource->capacity) . '" class="small-text"></td>';
 		echo '</tr>';
-
+		
+		echo '<tr>';
+			echo '<th><label for="resource_hourly_price">Hourly Price</label></th>';
+			echo '<td><input type="number" id="resource_hourly_price" name="resource_hourly_price" min="0" step="0.01" value="' . esc_attr( $resource->hourly_price ) . '" required></td>';
+		echo '</tr>';
+		
 		//edit images library
 		echo '<tr>';
 			echo '<th><label for="resource_image">Resource Image</label></th>';

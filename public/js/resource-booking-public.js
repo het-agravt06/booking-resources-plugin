@@ -34,7 +34,7 @@
 
             resources_html +=
               "</div>" +
-              '<h3>' +
+              "<h3>" +
               '<a class="resource-card-link" href="' +
               resourceBooking.bookingUrl +
               "?resource_id=" +
@@ -46,6 +46,11 @@
               "<p>" +
               "<strong>Capacity:</strong> " +
               resource.capacity +
+              "</p>" +
+              "<p>" +
+              "<strong>Price:</strong> ₹" +
+              resource.hourly_price +
+              " / hour" +
               "</p>" +
               "<p>" +
               resource.description +
@@ -162,6 +167,7 @@
 
         if (!resourceId || !startDatetime) {
           $("#resource-booking-availability").text("");
+          $("#resource-booking-price").text("");
 
           return;
         }
@@ -331,6 +337,36 @@
                 .removeClass()
                 .addClass("resource-booking-success")
                 .text("Selected time is available.");
+
+              /*
+               * Calculate booking price.
+               */
+              var resources = $("#resource_id").data("resources");
+              var selectedResource = null;
+
+              $.each(resources, function (index, resource) {
+                if (resource.id == resourceId) {
+                  selectedResource = resource;
+
+                  return false;
+                }
+              });
+
+              if (selectedResource) {
+                var startTime = new Date(startDatetime);
+                var endTime = new Date(endDatetime);
+
+                var durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                var hourlyPrice = parseFloat(selectedResource.hourly_price);
+                var totalAmount = durationHours * hourlyPrice;
+
+                $("#resource-booking-price").text(
+                  "Duration: " +
+                    durationHours +
+                    " hours | Total Price: ₹" +
+                    totalAmount.toFixed(2),
+                );
+              }
             }
           },
           error: function () {

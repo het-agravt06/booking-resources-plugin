@@ -203,6 +203,11 @@ class Resource_Booking_REST_API
             );
         }
 
+        // Calculate booking duration and total amount.
+        $duration_seconds = $end_time->getTimestamp() - $start_time->getTimestamp();
+        $duration_hours   = $duration_seconds / 3600;
+        $total_amount     = $duration_hours * (float) $resource->hourly_price;
+
         // Booking table.
         $bookings_table = $wpdb->prefix . 'rb_bookings';
 
@@ -253,10 +258,12 @@ class Resource_Booking_REST_API
                 'customer_email' => $customer_email,
                 'start_datetime' => $start_datetime,
                 'end_datetime'   => $end_datetime,
+                'total_amount'   => $total_amount,
+                'payment_status' => 'unpaid',
                 'status'         => 'pending',
-                'expires_at' => $expires_at,
-                'created_at' => $current_time,
-                'updated_at' => $current_time,
+                'expires_at'     => $expires_at,
+                'created_at'     => $current_time,
+                'updated_at'     => $current_time,
             ),
             array(
                 '%d',
@@ -264,11 +271,13 @@ class Resource_Booking_REST_API
                 '%s',
                 '%s',
                 '%s',
+                '%f',
                 '%s',
                 '%s',
                 '%s',
                 '%s',
-            )
+                '%s',
+            ),
         );
 
         if (false === $result) {
@@ -313,11 +322,15 @@ class Resource_Booking_REST_API
 
         
         return array(
-            'success'    => true,
-            'message'    => 'Booking request submitted successfully.',
-            'booking_id' => $wpdb->insert_id,
-            'status'     => 'pending',
-        );
+            'success'        => true,
+            'message'        => 'Booking request submitted successfully.',
+            'booking_id'     => $wpdb->insert_id,
+            'status'         => 'pending',
+            'duration_hours' => $duration_hours,
+            'hourly_price'   => (float) $resource->hourly_price,
+            'total_amount'   => $total_amount,
+            'payment_status' => 'unpaid',
+          );
     }
 
     /**
@@ -469,7 +482,7 @@ class Resource_Booking_REST_API
         $resources_table = $wpdb->prefix . 'rb_resources';
 
         $resources = $wpdb->get_results(
-            "SELECT id, name, description, capacity, image_id
+            "SELECT id, name, description, capacity, image_id, hourly_price
             FROM {$resources_table}
             ORDER BY name ASC"
         );

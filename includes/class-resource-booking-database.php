@@ -28,8 +28,9 @@ class Resource_Booking_Database {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(255) NOT NULL,
 			description text NOT NULL,
-			image_id longtext DEFAULT NULL,	
+			image_id longtext DEFAULT NULL,
 			capacity int(11) unsigned NOT NULL DEFAULT 1,
+			hourly_price decimal(10,2) NOT NULL DEFAULT 0.00,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY (id)
@@ -42,6 +43,8 @@ class Resource_Booking_Database {
 			customer_email varchar(255) NOT NULL,
 			start_datetime datetime NOT NULL,
 			end_datetime datetime NOT NULL,
+			total_amount decimal(10,2) NOT NULL DEFAULT 0.00,
+			payment_status varchar(20) NOT NULL DEFAULT 'unpaid',
 			status varchar(20) NOT NULL DEFAULT 'pending',
 			expires_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
@@ -49,6 +52,7 @@ class Resource_Booking_Database {
 			PRIMARY KEY (id),
 			KEY resource_id (resource_id),
 			KEY status (status),
+			KEY payment_status (payment_status),
 			KEY start_datetime (start_datetime),
 			KEY end_datetime (end_datetime)
 		) {$charset_collate};";
