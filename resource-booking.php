@@ -36,6 +36,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Rename this for your plugin and update it as you release new versions.
  */
 define( 'RESOURCE_BOOKING_VERSION', '1.0.0' );
+define( 'RESOURCE_BOOKING_DB_VERSION', '1.1.0' );
 
 /**
  * The code that runs during plugin activation.

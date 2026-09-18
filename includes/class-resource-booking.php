@@ -75,6 +75,10 @@ class Resource_Booking {
 		$this->plugin_name = 'resource-booking';
 
 		$this->load_dependencies();
+		
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-resource-booking-database.php';
+		Resource_Booking_Database::maybe_upgrade();
+
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
@@ -126,6 +130,11 @@ class Resource_Booking {
 		 * The class responsible for rest api
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-resource-booking-rest-api.php';
+
+		/**
+		 * The class responsible for stripe payment gateway
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-resource-booking-stripe.php';
 		
 		$this->loader = new Resource_Booking_Loader();
 
@@ -167,9 +176,11 @@ class Resource_Booking {
 		
 		$this->loader->add_action( 'admin_menu',$plugin_admin,'add_admin_menu');
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_booking_actions' );
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_stripe_settings_save' );
 		$this->loader->add_action( 'admin_notices', $plugin_admin, 'booking_admin_notices' );
 		$this->loader->add_action( 'wp_ajax_resource_booking_get_bookings', $plugin_admin, 'ajax_get_bookings' );
 		$this->loader->add_action( 'wp_ajax_resource_booking_update_booking_status', $plugin_admin, 'ajax_update_booking_status' );
+		$this->loader->add_action( 'wp_ajax_resource_booking_sync_payment', $plugin_admin, 'ajax_sync_booking_payment' );
 	}
 
 	/**
@@ -181,15 +192,18 @@ class Resource_Booking {
 	 */
 	private function define_public_hooks() {
 
-		$plugin_public = new Resource_Booking_Public( $this->get_plugin_name(), $this->get_version() );
+$plugin_public = new Resource_Booking_Public( $this->get_plugin_name(), $this->get_version() );
 		$this->loader->add_action( 'init', $plugin_public, 'register_shortcodes' );
 		$plugin_rest_api = new Resource_Booking_REST_API();
-		
+		$plugin_stripe = new Resource_Booking_Stripe();
+
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 		$this->loader->add_action( 'rest_api_init',$plugin_rest_api,'register_routes');
+		$this->loader->add_action( 'rest_api_init',$plugin_stripe,'register_routes');
 		$this->loader->add_filter( 'cron_schedules', $plugin_rest_api, 'add_cron_interval' );
 		$this->loader->add_action( 'init', $plugin_rest_api, 'schedule_expiration' );
+		$this->loader->add_action( 'init', $plugin_rest_api, 'maybe_expire_pending_bookings' );
 		$this->loader->add_action( 'resource_booking_expire_bookings', $plugin_rest_api, 'expire_pending_bookings' );
 	}
 

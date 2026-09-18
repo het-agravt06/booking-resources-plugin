@@ -2,9 +2,7 @@
   "use strict";
 
   $(document).ready(function () {
-    // ----------------------------------------------------------
     // Media library (resource images).
-    // ----------------------------------------------------------
     $("#resource_image_button").on("click", function (event) {
       event.preventDefault();
 
@@ -47,9 +45,8 @@
       $("#resource_image_preview").html("");
     });
 
-    // ----------------------------------------------------------
     // Bookings list: AJAX filters, pagination, confirm / reject.
-    // ----------------------------------------------------------
+
     var $tableWrapper = $("#resource-booking-bookings");
 
     if ($tableWrapper.length) {
@@ -70,14 +67,13 @@
           if (response.success) {
             $tableWrapper
               .data("current-page", response.data.current_page)
-              .attr(
-                "data-current-page",
-                response.data.current_page,
-              )
+              .attr("data-current-page", response.data.current_page)
               .html(response.data.html);
           } else {
             $tableWrapper.html(
-              "<p>" + (response.data.message || "Error loading bookings.") + "</p>",
+              "<p>" +
+                (response.data.message || "Error loading bookings.") +
+                "</p>",
             );
           }
         });
@@ -114,7 +110,11 @@
         var actionLabel =
           $button.data("rb-action") === "confirm" ? "confirm" : "reject";
 
-        if (!window.confirm("Are you sure you want to " + actionLabel + " this booking?")) {
+        if (
+          !window.confirm(
+            "Are you sure you want to " + actionLabel + " this booking?",
+          )
+        ) {
           return;
         }
 
@@ -137,6 +137,33 @@
             rbLoadBookings(currentPage);
           } else {
             window.alert(response.data.message || "Action failed.");
+          }
+        });
+      });
+
+      // Sync payment status with Stripe (delegated).
+      $tableWrapper.on("click", ".rb-sync-payment", function (event) {
+        event.preventDefault();
+
+        var $button = $(this);
+
+        $button.prop("disabled", true).text("Syncing...");
+
+        var data = {
+          action: "resource_booking_sync_payment",
+          nonce: resourceBookingAdmin.nonce,
+          booking_id: $button.data("booking-id"),
+        };
+
+        $.post(resourceBookingAdmin.ajaxUrl, data, function (response) {
+          if (response.success) {
+            var currentPage = $tableWrapper.data("current-page") || 1;
+
+            rbLoadBookings(currentPage);
+          } else {
+            $button.prop("disabled", false).text("Sync");
+
+            window.alert(response.data.message || "Sync failed.");
           }
         });
       });

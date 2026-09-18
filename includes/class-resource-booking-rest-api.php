@@ -360,6 +360,26 @@ class Resource_Booking_REST_API
     }
 
     /**
+     * Expire overdue pending bookings on page load.
+     *
+     * WP-Cron only fires when the site receives traffic, so we also
+     * run the expiration check on init (throttled) to guarantee
+     * stale bookings are released even on localhost.
+     */
+    public function maybe_expire_pending_bookings()
+    {
+        $last = get_transient( 'resource_booking_last_expire_check' );
+
+        if ( $last && ( time() - (int) $last ) < 300 ) {
+            return;
+        }
+
+        set_transient( 'resource_booking_last_expire_check', time(), 5 * MINUTE_IN_SECONDS );
+
+        $this->expire_pending_bookings();
+    }
+
+    /**
      * Register custom cron interval.
      */
     public function add_cron_interval($schedules)

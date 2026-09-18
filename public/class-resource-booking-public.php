@@ -135,10 +135,26 @@ class Resource_Booking_Public
 			$this->plugin_name,
 			'resourceBooking',
 			array(
-				'apiUrl'     => esc_url_raw( rest_url( 'resource-booking/v1/' ) ),
-				'bookingUrl' => esc_url_raw( $this->get_booking_page_url() ),
+				'apiUrl'             => esc_url_raw( rest_url( 'resource-booking/v1/' ) ),
+				'bookingUrl'         => esc_url_raw( $this->get_booking_page_url() ),
+				'stripePublishableKey' => $this->get_stripe_publishable_key(),
 			)
 		);
+	}
+
+	/**
+	 * Get the Stripe publishable key from settings.
+	 *
+	 * @since 1.0.0
+	 * @return string
+	 */
+	private function get_stripe_publishable_key() {
+
+		$settings = get_option( 'resource_booking_settings', array() );
+
+		return isset( $settings['stripe_publishable_key'] )
+			? $settings['stripe_publishable_key']
+			: '';
 	}
 
 

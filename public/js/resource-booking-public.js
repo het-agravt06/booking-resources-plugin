@@ -431,16 +431,28 @@
             $("#resource-booking-message").text("Submitting booking...");
           },
           success: function (response) {
-            $("#resource-booking-message")
-              .removeClass()
-              .addClass("resource-booking-success")
-              .text("Booking submitted successfully.");
+            if (
+              response.booking_id &&
+              resourceBooking.stripePublishableKey
+            ) {
+              $("#resource-booking-message")
+                .removeClass()
+                .addClass("resource-booking-success")
+                .text("Booking created. Redirecting to payment...");
 
-            $("#resource-booking-form")[0].reset();
+              createCheckoutSession(response.booking_id);
+            } else {
+              $("#resource-booking-message")
+                .removeClass()
+                .addClass("resource-booking-success")
+                .text("Booking submitted successfully.");
 
-            $("#resource-booking-availability").text("");
+              $("#resource-booking-form")[0].reset();
 
-            selectedTimeAvailable = null;
+              $("#resource-booking-availability").text("");
+
+              selectedTimeAvailable = null;
+            }
           },
           error: function (xhr) {
             var message = "Unable to submit booking.";
@@ -456,6 +468,117 @@
           },
         });
       });
+
+      function createCheckoutSession(bookingId) {
+        $.ajax({
+          url: resourceBooking.apiUrl + "create-checkout-session",
+          type: "POST",
+          data: { booking_id: bookingId },
+          beforeSend: function () {
+            $("#resource-booking-message").text(
+              "Creating secure payment session...",
+            );
+          },
+          success: function (response) {
+            if (response.checkout_url) {
+              window.location.href = response.checkout_url;
+            } else if (response.already_paid) {
+              $("#resource-booking-message")
+                .removeClass()
+                .addClass("resource-booking-success")
+                .text("This booking has already been paid.");
+            } else {
+              $("#resource-booking-message")
+                .removeClass()
+                .addClass("resource-booking-error")
+                .text("Unable to create payment session.");
+            }
+          },
+          error: function (xhr) {
+            var message = "Unable to create payment session.";
+
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+              message = xhr.responseJSON.message;
+            }
+
+            $("#resource-booking-message")
+              .removeClass()
+              .addClass("resource-booking-error")
+              .text(message);
+          },
+        });
+      }
+
+      /*
+       * Show payment result messages after returning
+       * from the Stripe checkout page.
+       */
+      var urlParams = new URLSearchParams(window.location.search);
+      var paymentResult = urlParams.get("rb_payment");
+
+      if (paymentResult) {
+        if (paymentResult === "success") {
+          var bookingId = urlParams.get("booking_id");
+
+          $("#resource-booking-message")
+            .removeClass()
+            .addClass("resource-booking-success")
+            .text("Payment successful. Confirming your booking...");
+
+          $("#resource-booking-form")[0].reset();
+
+          /*
+           * Verify the payment directly against Stripe.
+           * This updates the booking to paid/confirmed even when the
+           * webhook could not be delivered (e.g. localhost testing).
+           */
+          if (bookingId && resourceBooking.stripePublishableKey) {
+            $.ajax({
+              url: resourceBooking.apiUrl + "verify-booking-payment",
+              type: "POST",
+              data: { booking_id: bookingId },
+              success: function (response) {
+                if (
+                  response &&
+                  response.payment_status === "paid"
+                ) {
+                  $("#resource-booking-message")
+                    .removeClass()
+                    .addClass("resource-booking-success")
+                    .text("Payment successful. Your booking is confirmed.");
+                } else {
+                  $("#resource-booking-message")
+                    .removeClass()
+                    .addClass("resource-booking-info")
+                    .text(
+                      "Payment received. Your booking will be confirmed shortly.",
+                    );
+                }
+              },
+              error: function () {
+                $("#resource-booking-message")
+                  .removeClass()
+                  .addClass("resource-booking-info")
+                  .text(
+                    "Payment received. Your booking will be confirmed shortly.",
+                  );
+              },
+            });
+          } else {
+            $("#resource-booking-message")
+              .removeClass()
+              .addClass("resource-booking-success")
+              .text("Payment successful. Your booking is confirmed!");
+          }
+        } else if (paymentResult === "cancelled") {
+          $("#resource-booking-message")
+            .removeClass()
+            .addClass("resource-booking-error")
+            .text(
+              "Payment was cancelled. Your booking has been released. Please try again.",
+            );
+        }
+      }
     }
   });
 })(jQuery);

@@ -99,7 +99,16 @@ class Resource_Booking_Admin
 			'resource-booking-edit-booking',
 			array( $this, 'edit_booking_page' )
 		);
-		
+
+		add_submenu_page(
+			'resource-booking',
+			'Stripe Settings',
+			'Stripe Settings',
+			'manage_options',
+			'resource-booking-stripe-settings',
+			array( $this, 'stripe_settings_page' )
+		);
+
 	}
 
 	//form action button handling 
@@ -716,6 +725,7 @@ class Resource_Booking_Admin
 		echo '<th>Start</th>';
 		echo '<th>End</th>';
 		echo '<th>Status</th>';
+		echo '<th>Payment</th>';
 		echo '<th>Actions</th>';
 		echo '</tr>';
 		echo '</thead>';
@@ -731,8 +741,20 @@ class Resource_Booking_Admin
 			echo '<td>' . esc_html( $booking->customer_email ) . '</td>';
 			echo '<td>' . esc_html( $booking->start_datetime ) . '</td>';
 			echo '<td>' . esc_html( $booking->end_datetime ) . '</td>';
-			echo '<td><span class="rb-status rb-status-' . esc_attr( $booking->status ) . '">'
-				. esc_html( ucfirst( $booking->status ) ) . '</span></td>';
+echo '<td><span class="rb-status rb-status-' . esc_attr( $booking->status ) . '">'
+			. esc_html( ucfirst( $booking->status ) ) . '</span></td>';
+
+			$payment_status = isset( $booking->payment_status ) ? $booking->payment_status : 'unpaid';
+			echo '<td><span class="rb-status rb-status-' . esc_attr( $payment_status ) . '">'
+			. esc_html( ucfirst( $payment_status ) ) . '</span>';
+
+			if ( 'unpaid' === $payment_status && ! empty( $booking->stripe_session_id ) ) {
+				echo '<button type="button" class="button-link rb-sync-payment" data-booking-id="'
+					. esc_attr( $booking->id ) . '" title="Check Stripe for a missed payment">'
+					. 'Sync</button>';
+			}
+
+			echo '</td>';
 
 			echo '<td>';
 			echo '<a href="' . esc_url(
@@ -797,6 +819,50 @@ class Resource_Booking_Admin
 
 		return ob_get_clean();
 	}
+
+	/**
+     * AJAX handler: sync a booking's payment status with Stripe.
+     */
+    public function ajax_sync_booking_payment() {
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to manage bookings.' ) );
+        }
+
+        check_ajax_referer( 'resource_booking_admin', 'nonce' );
+
+        $booking_id = isset( $_POST['booking_id'] )
+            ? absint( $_POST['booking_id'] )
+            : 0;
+
+        if ( ! $booking_id ) {
+            wp_send_json_error( array( 'message' => 'Invalid request.' ) );
+        }
+
+        if ( ! class_exists( 'Resource_Booking_Stripe' ) ) {
+            wp_send_json_error( array( 'message' => 'Stripe integration is not available.' ) );
+        }
+
+        $stripe = new Resource_Booking_Stripe();
+
+        $result = $stripe->sync_booking_payment( $booking_id );
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        }
+
+        if ( 'paid' === $result['payment_status'] ) {
+            wp_send_json_success( array(
+                'message'        => 'Payment status synced: Paid.',
+                'payment_status' => 'paid',
+            ) );
+        }
+
+        wp_send_json_success( array(
+            'message'        => 'Payment not found on Stripe. Status: ' . ucfirst( $result['payment_status'] ) . '.',
+            'payment_status' => $result['payment_status'],
+        ) );
+    }
 
 	/**
 	 * AJAX handler: load filtered/paginated bookings table.
@@ -1071,6 +1137,120 @@ class Resource_Booking_Admin
 
 		echo '</form>';
 
+		echo '</div>';
+	}
+
+	/**
+	 * Handle saving the Stripe settings.
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_stripe_settings_save() {
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['resource_booking_stripe_save'] ) ) {
+			return;
+		}
+
+		check_admin_referer(
+			'resource_booking_save_stripe_settings',
+			'resource_booking_stripe_nonce'
+		);
+
+		$settings = get_option( 'resource_booking_settings', array() );
+
+		$settings['stripe_publishable_key'] = isset( $_POST['stripe_publishable_key'] )
+			? sanitize_text_field( wp_unslash( $_POST['stripe_publishable_key'] ) )
+			: '';
+
+		$settings['stripe_secret_key'] = isset( $_POST['stripe_secret_key'] )
+			? sanitize_text_field( wp_unslash( $_POST['stripe_secret_key'] ) )
+			: '';
+
+		$settings['stripe_webhook_secret'] = isset( $_POST['stripe_webhook_secret'] )
+			? sanitize_text_field( wp_unslash( $_POST['stripe_webhook_secret'] ) )
+			: '';
+
+		update_option( 'resource_booking_settings', $settings );
+
+		wp_safe_redirect(
+			admin_url( 'admin.php?page=resource-booking-stripe-settings&stripe_saved=1' )
+		);
+		exit;
+	}
+
+	/**
+	 * Display the Stripe settings page.
+	 *
+	 * @since 1.0.0
+	 */
+	public function stripe_settings_page() {
+
+		$settings = get_option( 'resource_booking_settings', array() );
+
+		$stripe_publishable_key = isset( $settings['stripe_publishable_key'] )
+			? $settings['stripe_publishable_key']
+			: '';
+
+		$stripe_secret_key = isset( $settings['stripe_secret_key'] )
+			? $settings['stripe_secret_key']
+			: '';
+
+		$stripe_webhook_secret = isset( $settings['stripe_webhook_secret'] )
+			? $settings['stripe_webhook_secret']
+			: '';
+
+		$webhook_url = rest_url( 'resource-booking/v1/stripe-webhook' );
+
+		echo '<div class="wrap">';
+		echo '<h1>Stripe Settings</h1>';
+
+		echo '<p>Configure your Stripe API keys to enable online payments for bookings.</p>';
+
+		echo '<p>';
+		echo '<strong>Webhook URL:</strong> <code>' . esc_html( $webhook_url ) . '</code>';
+		echo '<br>';
+		echo 'Add this URL to the webhook endpoints in your <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener">Stripe Dashboard</a> and subscribe to the <code>checkout.session.completed</code> and <code>checkout.session.expired</code> events.';
+		echo '</p>';
+
+		echo '<p style="color: #666;">';
+		echo 'Use <code>sk_test_...</code> / <code>pk_test_...</code> keys for testing in the Stripe Dashboard. A test card like <code>4242 4242 4242 4242</code> works in test mode.';
+		echo '</p>';
+
+		echo '<form method="post">';
+
+		wp_nonce_field(
+			'resource_booking_save_stripe_settings',
+			'resource_booking_stripe_nonce'
+		);
+
+		echo '<table class="form-table">';
+
+		echo '<tr>';
+		echo '<th><label for="stripe_publishable_key">Stripe Publishable Key</label></th>';
+		echo '<td><input type="text" id="stripe_publishable_key" name="stripe_publishable_key" class="regular-text" value="' . esc_attr( $stripe_publishable_key ) . '"></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th><label for="stripe_secret_key">Stripe Secret Key</label></th>';
+		echo '<td><input type="password" id="stripe_secret_key" name="stripe_secret_key" class="regular-text" value="' . esc_attr( $stripe_secret_key ) . '"></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th><label for="stripe_webhook_secret">Stripe Webhook Secret</label></th>';
+		echo '<td><input type="password" id="stripe_webhook_secret" name="stripe_webhook_secret" class="regular-text" value="' . esc_attr( $stripe_webhook_secret ) . '"></td>';
+		echo '</tr>';
+
+		echo '</table>';
+
+		echo '<p class="submit">';
+		echo '<input type="submit" name="resource_booking_stripe_save" class="button button-primary" value="Save Stripe Settings">';
+		echo '</p>';
+
+		echo '</form>';
 		echo '</div>';
 	}
 
@@ -1637,12 +1817,18 @@ class Resource_Booking_Admin
 			echo '</div>';
 		}
 
-		if ( isset( $_GET['rejected'] ) && '1' === $_GET['rejected'] ) {
-			echo '<div class="notice notice-success is-dismissible">';
-			echo '<p>Booking rejected successfully.</p>';
-			echo '</div>';
-		}
-
+if ( isset( $_GET['rejected'] ) && '1' === $_GET['rejected'] ) {
+		echo '<div class="notice notice-success is-dismissible">';
+		echo '<p>Booking rejected successfully.</p>';
+		echo '</div>';
 	}
+
+	if ( isset( $_GET['stripe_saved'] ) && '1' === $_GET['stripe_saved'] ) {
+		echo '<div class="notice notice-success is-dismissible">';
+		echo '<p>Stripe settings saved successfully.</p>';
+		echo '</div>';
+	}
+
+}
 	
 }

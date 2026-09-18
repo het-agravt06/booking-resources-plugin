@@ -51,6 +51,9 @@ class Resource_Booking_Activator
 				'2026-09-22',
 			),
 			'hold_duration' => 30,
+			'stripe_publishable_key' => '',
+			'stripe_secret_key' => '',
+			'stripe_webhook_secret' => '',
 		);
 		update_option( 'resource_booking_settings', $default_settings );  
 	}

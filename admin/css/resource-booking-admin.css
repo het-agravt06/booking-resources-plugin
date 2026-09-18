@@ -43,6 +43,26 @@
 	color: #383d41;
 }
 
+.rb-status-paid {
+	background: #cce5ff;
+	color: #004085;
+}
+
+.rb-status-unpaid {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.rb-status-refunded {
+	background: #e2e3e5;
+	color: #383d41;
+}
+
+.rb-sync-payment {
+	margin-left: 6px;
+	font-size: 12px;
+}
+
 /* Filter controls. */
 #resource-booking-filters {
 	margin: 15px 0 20px;

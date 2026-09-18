@@ -46,6 +46,8 @@ class Resource_Booking_Database {
 			total_amount decimal(10,2) NOT NULL DEFAULT 0.00,
 			payment_status varchar(20) NOT NULL DEFAULT 'unpaid',
 			status varchar(20) NOT NULL DEFAULT 'pending',
+			stripe_session_id varchar(255) DEFAULT NULL,
+			stripe_payment_intent varchar(255) DEFAULT NULL,
 			expires_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
@@ -59,5 +61,27 @@ class Resource_Booking_Database {
 
 		dbDelta( $resources_sql );
 		dbDelta( $bookings_sql );
+	}
+
+	/**
+	 * Migrate existing plugin database tables.
+	 *
+	 * Runs on every plugin load so previously-created
+	 * bookings tables get the new Stripe columns.
+	 *
+	 * @return void
+	 */
+	public static function maybe_upgrade() {
+
+		// If the database version matches, nothing to do.
+		$db_version = get_option( 'resource_booking_db_version' );
+
+		if ( $db_version === RESOURCE_BOOKING_DB_VERSION ) {
+			return;
+		}
+
+		self::create_tables();
+
+		update_option( 'resource_booking_db_version', RESOURCE_BOOKING_DB_VERSION );
 	}
 }
